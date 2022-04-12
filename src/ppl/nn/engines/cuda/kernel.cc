@@ -190,8 +190,9 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
             LOG(ERROR) << "convert data of tensor[" << tensor->GetName() << "] failed: " << GetRetCodeStr(status);
             return false;
         }
-        // const string out_file_name = "pplnn_output-" + tensor->GetName()  + ".dat";
-        const string out_file_name = tensor->GetName();
+        const string out_file_name = "pplnn_output-" + (string)tensor->GetName()  + ".dat";
+        // string out_file_name = tensor->GetName();
+        // out_file_name = "pplnn_output-" + out_file_name + ".dat";
         ofstream ofs(out_file_name, ios_base::out | ios_base::binary | ios_base::trunc);
         if (!ofs.is_open()) {
             LOG(ERROR) << "open output file[" << out_file_name << "]";
