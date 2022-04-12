@@ -22,7 +22,17 @@
 #include <fstream>
 #include "ppl/common/allocator.h"
 #include "ppl/nn/common/logger.h"
+#include <string.h>
+#include <string>
+#include <random>
+#include <map>
+#include <sstream>
+#include <iostream>
+#include <functional>
+#include <algorithm>
 
+using namespace std;
+using namespace ppl::nn;
 using namespace ppl::common;
 
 namespace ppl { namespace nn { namespace cuda {
@@ -165,6 +175,30 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
     auto diff = std::chrono::duration_cast<std::chrono::microseconds>(run_end_ts - run_begin_ts);
     LOG(INFO) << "After execute kernel[" << GetName() << "] with running time " << (float)diff.count()
               << " ms and memory cost " << total_size;
+    // save output tensor for debug layer by layer
+    for (uint32_t i = 0; i < ctx->GetOutputCount(); ++i) {
+        auto tensor = ctx->GetOutput<TensorImpl>(i);
+        TensorShape dst_desc = *tensor->GetShape();
+        dst_desc.SetDataFormat(DATAFORMAT_NDARRAY);
+        if(dst_desc.GetDataType()==DATATYPE_FLOAT16) {
+            dst_desc.SetDataType(DATATYPE_FLOAT32);
+        }
+        auto bytes = dst_desc.GetBytesIncludingPadding();
+        vector<char> buffer(bytes);
+        status = tensor->ConvertToHost(buffer.data(), dst_desc);
+        if (status != RC_SUCCESS) {
+            LOG(ERROR) << "convert data of tensor[" << tensor->GetName() << "] failed: " << GetRetCodeStr(status);
+            return false;
+        }
+        // const string out_file_name = "pplnn_output-" + tensor->GetName()  + ".dat";
+        const string out_file_name = tensor->GetName();
+        ofstream ofs(out_file_name, ios_base::out | ios_base::binary | ios_base::trunc);
+        if (!ofs.is_open()) {
+            LOG(ERROR) << "open output file[" << out_file_name << "]";
+            return false;
+        }
+        ofs.write(buffer.data(), bytes);
+    }
 #endif
 
     barrier_.Update(GetCudaDevice()->GetStream());
