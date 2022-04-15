@@ -44,6 +44,10 @@ bool TuringHMMAImpgemm::IsSupported(const ir::Node* node, const OptKernelOptions
                                     dataformat_t input_format) const {
     uint32_t group = (reinterpret_cast<CudaConvParam*>(options.param))->param.group;
     // check if conv is depthwise
+    const TensorShape& tensor0 = *options.tensors->find(node->GetInput(0))->second->GetShape();
+    if (tensor0.GetDataType() != ppl::common::DATATYPE_FLOAT16) {
+        return false;
+    }
     const TensorShape& tensor1 = *options.tensors->find(node->GetInput(1))->second->GetShape();
     if (group == tensor1.GetDim(0) && tensor1.GetDim(1) == 1 && group != 1) {
         return false;
