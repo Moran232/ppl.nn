@@ -167,6 +167,10 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
 
     if (CanDoExecute(*ctx)) {
         status = DoExecute(ctx);
+        if (status != RC_SUCCESS) {
+          LOG(ERROR) << "Execute kernel [" << GetName() <<"] failed";
+          return status;
+        }
     }
 
 #ifndef NDEBUG
