@@ -15,18 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef _ST_HPC_PPL_NN_ENGINES_CUDA_PARAMS_CLIP_EXTRA_PARAM_H_
-#define _ST_HPC_PPL_NN_ENGINES_CUDA_PARAMS_CLIP_EXTRA_PARAM_H_
+#ifndef _ST_HPC_PPL_NN_ENGINES_RISCV_OPTIMIZER_RULES_FUSE_CONV_ACTIVATION_H_
+#define _ST_HPC_PPL_NN_ENGINES_RISCV_OPTIMIZER_RULES_FUSE_CONV_ACTIVATION_H_
 
-#include <set>
-#include <string>
-#include <float.h>
+#include "ppl/nn/engines/riscv/optimizer/opt_kernel.h"
 
-namespace ppl { namespace nn { namespace cuda {
-struct ClipParam {
-    float min_val = -FLT_MAX;
-    float max_val = FLT_MAX;
-};
-}}} // namespace ppl::nn::cuda
+namespace ppl { namespace nn { namespace riscv {
+
+bool FuseConvActivation(const OptKernelOptions& options);
+
+}}} // namespace ppl::nn::riscv
 
 #endif

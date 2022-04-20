@@ -25,15 +25,26 @@ using namespace ppl::common;
 #include "ppl/nn/engines/cuda/optimizer/ops/ppl/reduce_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/conv_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/add_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/and_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/argmax_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/average_pool_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/batch_normalization_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/cast_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/ceil_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/convtranspose_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/clip_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/concat_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/constant_of_shape_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/cos_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/cumsum_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/depth_to_space_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/div_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/equal_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/erf_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/exp_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/expand_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/flatten_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/floor_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/gather_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/gather_nd_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/gemm_op.h"
@@ -41,53 +52,52 @@ using namespace ppl::common;
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/global_max_pool_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/greater_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/identity_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/if_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/leaky_relu_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/less_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/log_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/loop_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/lstm_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/matmul_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/max_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/min_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/max_pool_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/max_unpool_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/matmul_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/min_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/mul_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/non_max_suppression_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/non_zero_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/not_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/roialign_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/pad_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/pow_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/range_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/reduce_max_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/reduce_min_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/reduce_mean_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/reduce_prod_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/reduce_sum_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/relu_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/reshape_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/resize_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/scatter_elements_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/scatter_nd_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/sequence_at_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/shape_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/sigmoid_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/sin_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/slice_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/softmax_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/split_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/split_to_sequence_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/sqrt_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/squeeze_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/sub_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/tanh_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/tile_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/onnx/topk_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/transpose_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/unsqueeze_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/cast_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/pow_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/slice_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/batch_normalization_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/where_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/range_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/topk_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/tanh_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/resize_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/roialign_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/shape_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/constant_of_shape_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/log_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/depth_to_space_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/tile_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/less_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/floor_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/convtranspose_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/scatter_elements_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/ceil_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/and_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/if_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/loop_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/sequence_at_op.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/onnx/split_to_sequence_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/onnx/lstm_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/mmcv/mmcv_non_max_suppression_op.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/mmcv/mmcv_roialign_op.h"
@@ -119,30 +129,33 @@ void RegisterBuiltinOpImpls() {
     // A
     RegisterOptKernelCreator<AddOp>("", "Add", 7, 12);
     RegisterOptKernelCreator<AndOp>("", "And", 7, 16);
-    RegisterOptKernelCreator<ArgmaxOp>("", "ArgMax", 11, 11);
-    RegisterOptKernelCreator<AveragePoolOp>("", "AveragePool", 11, 16);
+    RegisterOptKernelCreator<ArgmaxOp>("", "ArgMax", 1, 11);
+    RegisterOptKernelCreator<AveragePoolOp>("", "AveragePool", 1, 16);
     // B
     RegisterOptKernelCreator<BatchNormalizationOp>("", "BatchNormalization", 9, 13);
     // C
     RegisterOptKernelCreator<CastOp>("", "Cast", 9, 12);
     RegisterOptKernelCreator<CeilOp>("", "Ceil", 6, 12);
-    RegisterOptKernelCreator<ClipOp>("", "Clip", 11, 11);
-    RegisterOptKernelCreator<ConcatOp>("", "Concat", 11, 12);
+    RegisterOptKernelCreator<ClipOp>("", "Clip", 6, 13);
+    RegisterOptKernelCreator<ConcatOp>("", "Concat", 4, 12);
     RegisterOptKernelCreator<ConstantOfShapeOp>("", "ConstantOfShape", 9, 16);
-    RegisterOptKernelCreator<ConvOp>("", "Conv", 11, 16);
-    RegisterOptKernelCreator<ConvTransposeOp>("", "ConvTranspose", 11, 16);
+    RegisterOptKernelCreator<ConvOp>("", "Conv", 1, 16);
+    RegisterOptKernelCreator<ConvTransposeOp>("", "ConvTranspose", 1, 16);
+    RegisterOptKernelCreator<CosOp>("", "Cos", 7, 16);
+    RegisterOptKernelCreator<CumSumOp>("", "CumSum", 11, 16);
     // D
-    RegisterOptKernelCreator<DepthToSpaceOp>("", "DepthToSpace", 11, 12);
+    RegisterOptKernelCreator<DepthToSpaceOp>("", "DepthToSpace", 1, 16);
     RegisterOptKernelCreator<DivOp>("", "Div", 7, 12);
     // E
-    RegisterOptKernelCreator<EqualOp>("", "Equal", 11, 12);
+    RegisterOptKernelCreator<EqualOp>("", "Equal", 7, 16);
+    RegisterOptKernelCreator<ErfOp>("", "Erf", 9, 16);
     RegisterOptKernelCreator<ExpOp>("", "Exp", 6, 12);
     RegisterOptKernelCreator<ExpandOp>("", "Expand", 8, 12);
     // F
-    RegisterOptKernelCreator<FlattenOp>("", "Flatten", 11, 12);
-    RegisterOptKernelCreator<FloorOp>("", "Floor", 6, 12);
+    RegisterOptKernelCreator<FlattenOp>("", "Flatten", 1, 16);
+    RegisterOptKernelCreator<FloorOp>("", "Floor", 6, 16);
     // G
-    RegisterOptKernelCreator<GatherOp>("", "Gather", 11, 12);
+    RegisterOptKernelCreator<GatherOp>("", "Gather", 1, 16);
     RegisterOptKernelCreator<GatherNDOp>("", "GatherND", 11, 11);
     RegisterOptKernelCreator<GemmOp>("", "Gemm", 11, 12);
     RegisterOptKernelCreator<GlobalAveragePoolOp>("", "GlobalAveragePool", 1, 16);
@@ -150,34 +163,34 @@ void RegisterBuiltinOpImpls() {
     RegisterOptKernelCreator<GreaterOp>("", "Greater", 9, 12);
     // I
     RegisterOptKernelCreator<IdentityOp>("", "Identity", 1, 12);
-    RegisterOptKernelCreator<IfOp>("", "If", 11, 12);
+    RegisterOptKernelCreator<IfOp>("", "If", 1, 12);
     // L
     RegisterOptKernelCreator<LeakyReluOp>("", "LeakyRelu", 6, 16);
     RegisterOptKernelCreator<LessOp>("", "Less", 9, 12);
     RegisterOptKernelCreator<LogOp>("", "Log", 6, 12);
-    RegisterOptKernelCreator<LoopOp>("", "Loop", 11, 12);
+    RegisterOptKernelCreator<LoopOp>("", "Loop", 1, 12);
     RegisterOptKernelCreator<LstmOp>("", "LSTM", 7, 13);
     // M
     RegisterOptKernelCreator<MatMulOp>("", "MatMul", 9, 12);
     RegisterOptKernelCreator<MaxOp>("", "Max", 8, 11);
-    RegisterOptKernelCreator<MaxPoolOp>("", "MaxPool", 11, 13);
-    RegisterOptKernelCreator<MaxUnPoolOp>("", "MaxUnpool", 11, 16);
+    RegisterOptKernelCreator<MaxPoolOp>("", "MaxPool", 1, 16);
+    RegisterOptKernelCreator<MaxUnPoolOp>("", "MaxUnpool", 9, 16);
     RegisterOptKernelCreator<MinOp>("", "Min", 8, 11);
     RegisterOptKernelCreator<MulOp>("", "Mul", 7, 12);
     // N
-    RegisterOptKernelCreator<NonMaxSupressionOp>("", "NonMaxSuppression", 11, 16);
+    RegisterOptKernelCreator<NonMaxSupressionOp>("", "NonMaxSuppression", 10, 16);
     RegisterOptKernelCreator<NonZeroOp>("", "NonZero", 9, 12);
     RegisterOptKernelCreator<NotOp>("", "Not", 1, 16);
     // P
-    RegisterOptKernelCreator<PadOp>("", "Pad", 11, 12);
+    RegisterOptKernelCreator<PadOp>("", "Pad", 2, 12);
     RegisterOptKernelCreator<PowOp>("", "Pow", 7, 11);
     // R
     RegisterOptKernelCreator<RangeOp>("", "Range", 11, 16);
-    RegisterOptKernelCreator<ReduceOp>("", "ReduceMax", 11, 11);
-    RegisterOptKernelCreator<ReduceOp>("", "ReduceMean", 11, 12);
-    RegisterOptKernelCreator<ReduceOp>("", "ReduceMin", 11, 11);
-    RegisterOptKernelCreator<ReduceOp>("", "ReduceProd", 11, 12);
-    RegisterOptKernelCreator<ReduceOp>("", "ReduceSum", 11, 12);
+    RegisterOptKernelCreator<ReduceOp>("", "ReduceMax", 1, 16);
+    RegisterOptKernelCreator<ReduceOp>("", "ReduceMean", 1, 16);
+    RegisterOptKernelCreator<ReduceOp>("", "ReduceMin", 1, 16);
+    RegisterOptKernelCreator<ReduceOp>("", "ReduceProd", 1, 16);
+    RegisterOptKernelCreator<ReduceOp>("", "ReduceSum", 1, 16);
     RegisterOptKernelCreator<ReluOp>("", "Relu", 6, 12);
     RegisterOptKernelCreator<ReshapeOp>("", "Reshape", 5, 12);
     RegisterOptKernelCreator<ResizeOp>("", "Resize", 11, 12);
@@ -188,12 +201,13 @@ void RegisterBuiltinOpImpls() {
     RegisterOptKernelCreator<SequenceAtOp>("", "SequenceAt", 11, 16);
     RegisterOptKernelCreator<ShapeOp>("", "Shape", 1, 12);
     RegisterOptKernelCreator<SigmoidOp>("", "Sigmoid", 6, 12);
-    RegisterOptKernelCreator<SliceOp>("", "Slice", 11, 12);
-    RegisterOptKernelCreator<SoftmaxOp>("", "Softmax", 11, 12);
-    RegisterOptKernelCreator<SplitOp>("", "Split", 11, 12);
+    RegisterOptKernelCreator<SinOp>("", "Sin", 7, 16);
+    RegisterOptKernelCreator<SliceOp>("", "Slice", 1, 16);
+    RegisterOptKernelCreator<SoftmaxOp>("", "Softmax", 1, 12);
+    RegisterOptKernelCreator<SplitOp>("", "Split", 2, 12);
     RegisterOptKernelCreator<SplitToSequenceOp>("", "SplitToSequence", 11, 16);
     RegisterOptKernelCreator<SqrtOp>("", "Sqrt", 6, 12);
-    RegisterOptKernelCreator<SqueezeOp>("", "Squeeze", 11, 12);
+    RegisterOptKernelCreator<SqueezeOp>("", "Squeeze", 1, 12);
     RegisterOptKernelCreator<SubOp>("", "Sub", 7, 12);
     // T
     RegisterOptKernelCreator<TanhOp>("", "Tanh", 6, 12);
@@ -201,7 +215,7 @@ void RegisterBuiltinOpImpls() {
     RegisterOptKernelCreator<TopKOp>("", "TopK", 11, 16);
     RegisterOptKernelCreator<TransposeOp>("", "Transpose", 1, 12);
     // U
-    RegisterOptKernelCreator<UnsqueezeOp>("", "Unsqueeze", 11, 12);
+    RegisterOptKernelCreator<UnsqueezeOp>("", "Unsqueeze", 1, 12);
     // W
     RegisterOptKernelCreator<WhereOp>("", "Where", 9, 15);
 
