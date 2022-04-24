@@ -35,6 +35,7 @@
 #include "ppl/nn/models/onnx/parsers/onnx/parse_gather_nd_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_gemm_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_if_param.h"
+#include "ppl/nn/models/onnx/parsers/onnx/parse_instancenormalization_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_leaky_relu_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_loop_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_lrn_param.h"
@@ -92,30 +93,30 @@ bool ParamEqual(const void* param_0, const void* param_1) {
     return *static_cast<const T*>(param_0) == *static_cast<const T*>(param_1);
 }
 
-#define PPL_REGISTER_OP_WITH_PARAM(domain, type, first_version, last_version, param_type, parse_param_func)    \
-    do {                                                                                                       \
-        if (last_version < first_version) {                                                                    \
-            LOG(ERROR) << "register op[" << domain << ":" << type << "] failed: last_version[" << last_version \
-                       << "] < first_version[" << first_version << "]";                                        \
-            exit(-1);                                                                                          \
-        }                                                                                                      \
-                                                                                                               \
-        ParserInfo parse_info;                                                                                 \
-        parse_info.create_param = CreateParam<param_type>;                                                     \
-        parse_info.parse_param = parse_param_func;                                                             \
-        parse_info.destroy_param = DeleteParam<param_type>;                                                    \
-        auto status = Register(domain, type, utils::VersionRange(first_version, last_version), parse_info);    \
-        if (status != RC_SUCCESS) {                                                                            \
-            exit(-1);                                                                                          \
-        }                                                                                                      \
-                                                                                                               \
-        ParamUtils u;                                                                                          \
-        u.equal = ParamEqual<param_type>;                                                                      \
-        status = ParamUtilsManager::Instance()->Register(domain, type,                                         \
-                                                         utils::VersionRange(first_version, last_version), u); \
-        if (status != RC_SUCCESS) {                                                                            \
-            exit(-1);                                                                                          \
-        }                                                                                                      \
+#define PPL_REGISTER_OP_WITH_PARAM(domain, type, first_version, last_version, param_type, parse_param_func)       \
+    do {                                                                                                          \
+        if (last_version < first_version) {                                                                       \
+            LOG(ERROR) << "register op[" << domain << ":" << type << "] failed: last_version[" << last_version    \
+                       << "] < first_version[" << first_version << "]";                                           \
+            exit(-1);                                                                                             \
+        }                                                                                                         \
+                                                                                                                  \
+        ParserInfo parse_info;                                                                                    \
+        parse_info.create_param = CreateParam<param_type>;                                                        \
+        parse_info.parse_param = parse_param_func;                                                                \
+        parse_info.destroy_param = DeleteParam<param_type>;                                                       \
+        auto status = Register(domain, type, utils::VersionRange(first_version, last_version), parse_info);       \
+        if (status != RC_SUCCESS) {                                                                               \
+            exit(-1);                                                                                             \
+        }                                                                                                         \
+                                                                                                                  \
+        ParamUtils u;                                                                                             \
+        u.equal = ParamEqual<param_type>;                                                                         \
+        status = ParamUtilsManager::GetInstance()->Register(domain, type,                                         \
+                                                            utils::VersionRange(first_version, last_version), u); \
+        if (status != RC_SUCCESS) {                                                                               \
+            exit(-1);                                                                                             \
+        }                                                                                                         \
     } while (0)
 
 #define PPL_REGISTER_OP_WITHOUT_PARAM(domain, type, first_version, last_version)              \
@@ -170,6 +171,8 @@ ParamParserManager::ParamParserManager() {
     // I
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Identity", 1, 13);
     PPL_REGISTER_OP_WITH_PARAM("", "If", 1, 12, ppl::nn::onnx::IfParam, ParseIfParam);
+    PPL_REGISTER_OP_WITH_PARAM("", "InstanceNormalization", 6, 13, ppl::nn::onnx::InstanceNormalizationParam,
+                               ParseInstanceNormalizationParam);
     // L
     PPL_REGISTER_OP_WITH_PARAM("", "LeakyRelu", 6, 16, ppl::nn::onnx::LeakyReluParam, ParseLeakyReluParam);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Less", 7, 16);
@@ -195,6 +198,7 @@ ParamParserManager::ParamParserManager() {
     PPL_REGISTER_OP_WITHOUT_PARAM("", "PRelu", 6, 16);
     // R
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Range", 11, 16);
+    PPL_REGISTER_OP_WITH_PARAM("", "ReduceL2", 1, 16, ppl::nn::onnx::ReduceParam, ParseReduceParam);
     PPL_REGISTER_OP_WITH_PARAM("", "ReduceMax", 1, 16, ppl::nn::onnx::ReduceParam, ParseReduceParam);
     PPL_REGISTER_OP_WITH_PARAM("", "ReduceMean", 1, 16, ppl::nn::onnx::ReduceParam, ParseReduceParam);
     PPL_REGISTER_OP_WITH_PARAM("", "ReduceMin", 1, 16, ppl::nn::onnx::ReduceParam, ParseReduceParam);
@@ -218,7 +222,7 @@ ParamParserManager::ParamParserManager() {
     PPL_REGISTER_OP_WITH_PARAM("", "SplitToSequence", 11, 16, ppl::nn::onnx::SplitToSequenceParam,
                                ParseSplitToSequenceParam);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Sqrt", 6, 16);
-    PPL_REGISTER_OP_WITH_PARAM("", "Squeeze", 1, 12, ppl::nn::onnx::SqueezeParam, ParseSqueezeParam);
+    PPL_REGISTER_OP_WITH_PARAM("", "Squeeze", 1, 16, ppl::nn::onnx::SqueezeParam, ParseSqueezeParam);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Sub", 7, 16);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Sum", 6, 16);
     // T
@@ -227,7 +231,7 @@ ParamParserManager::ParamParserManager() {
     PPL_REGISTER_OP_WITH_PARAM("", "TopK", 1, 16, ppl::nn::onnx::TopKParam, ParseTopKParam);
     PPL_REGISTER_OP_WITH_PARAM("", "Transpose", 1, 16, ppl::nn::onnx::TransposeParam, ParseTransposeParam);
     // U
-    PPL_REGISTER_OP_WITH_PARAM("", "Unsqueeze", 1, 12, ppl::nn::onnx::UnsqueezeParam, ParseUnsqueezeParam);
+    PPL_REGISTER_OP_WITH_PARAM("", "Unsqueeze", 1, 16, ppl::nn::onnx::UnsqueezeParam, ParseUnsqueezeParam);
     // W
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Where", 9, 16);
 
