@@ -57,10 +57,7 @@ bool DepthwiseDirect::IsSupported(const ir::Node* node, const OptKernelOptions& 
     if (quant0.type == DATATYPE_INT8) {
         return false;
     }
-    // if (input_format != DATAFORMAT_NHWC8) {
-    //     return false;
-    // }
-    if (tensor0.GetDataType() != ppl::common::DATATYPE_FLOAT16) {
+    if (input_format != DATAFORMAT_NHWC8) {
         return false;
     }
     return true;

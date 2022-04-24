@@ -42,7 +42,6 @@ void GemmAlgorithm::GetAttrParam(void*& param) const {
     return;
 }
 
-
 bool GemmAlgorithm::IsSupported(const ir::Node* node, const OptKernelOptions& options,
                                 dataformat_t input_format) const {
     const TensorShape& tensor0 = *options.tensors->find(node->GetInput(0))->second->GetShape();
