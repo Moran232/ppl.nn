@@ -79,6 +79,9 @@ const RetCode ConcatFusion::FuseNode(ir::Node* node, bool reliable, const OptKer
             continue;
         }
         auto prenode_id = topo->GetEdgeById(edge_id)->GetProducer();
+        if(prenode_id == INVALID_NODEID){
+            continue;
+        }
         auto prenode = topo->GetNodeById(prenode_id);
 
         if (i < MAX_MASK_SIZE && CanFuse(prenode, options, offset_channel_size)) {

@@ -454,12 +454,13 @@ RetCode OptGraph::SelectAlgos(const utils::SharedResource& resource, CudaDevice*
     for (uint32_t i = 0; i < sorted_node_ids_.size(); ++i) {
         auto node = topo->GetNodeById(sorted_node_ids_[i]);
         CudaOptKernel* kernel = (CudaOptKernel*)(info_->kernels.find(node->GetId())->second.get());
-
+        LOG(INFO) <<i <<" create Node [" << node->GetName() <<"]";
         auto status = algo_graph.CreateNode(node, kernel);
         if (status != RC_SUCCESS) {
             LOG(ERROR) << "Create the node[" << node->GetName() << "] failed." << GetRetCodeStr(status);
             return status;
         }
+        LOG(INFO) << i << " Update Node["<< node->GetName()<<"]";
         status = algo_graph.UpdateNode(node, options);
         if (status != RC_SUCCESS) {
             LOG(ERROR) << "Update the node[" << node->GetName() << "] failed." << GetRetCodeStr(status);
@@ -471,7 +472,7 @@ RetCode OptGraph::SelectAlgos(const utils::SharedResource& resource, CudaDevice*
     for (int32_t i = sorted_node_ids_.size() - 1; i >= 0; --i) {
         auto node_id = sorted_node_ids_[i];
         auto node = topo->GetNodeById(node_id);
-
+        LOG(INFO) << i << " determine Node ["<< node->GetName()<<"]";
         auto kernel = info_->kernels.find(node_id);
         if (kernel == info_->kernels.end()) {
             LOG(ERROR) << "Can not find kernel[" << node->GetName() << "].";

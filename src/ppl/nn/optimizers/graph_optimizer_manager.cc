@@ -33,7 +33,7 @@ namespace ppl { namespace nn {
 
 GraphOptimizerManager::GraphOptimizerManager() {
     REGISTER_OPTIMIZER("ConstantNodeOptimizer", ConstantNodeOptimizer);
-    REGISTER_OPTIMIZER("FuseParallelNodeOptimizer", FuseParallelNodeOptimizer);
+    // REGISTER_OPTIMIZER("FuseParallelNodeOptimizer", FuseParallelNodeOptimizer);
     REGISTER_OPTIMIZER("FuseBNOptimizer", FuseBNOptimizer);
     REGISTER_OPTIMIZER("FuseShapeOptimizer", FuseShapeOptimizer);
     REGISTER_OPTIMIZER("SkipDropoutOptimizer", SkipDropoutOptimizer);
