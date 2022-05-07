@@ -21,10 +21,11 @@
 #include "ppl/nn/engines/cuda/optimizer/opt_kernel.h"
 #include "ppl/nn/engines/cuda/optimizer/opt_kernel_creator_manager.h"
 #include "ppl/nn/params/onnx/transpose_param.h"
-#include "ppl/nn/params/ppl/channel_shuffle_param.h"
-#include "ppl/nn/params/ppl/shape_operation_param.h"
+#include "ppl/nn/params/pmx/channel_shuffle_param.h"
+#include "ppl/nn/params/pmx/shape_operation_param.h"
 
 using namespace ppl::common;
+using namespace ppl::nn::pmx;
 
 namespace ppl { namespace nn { namespace cuda {
 
@@ -49,15 +50,15 @@ const bool ChannelShuffleFusion::CanFuseFirstReshape(ir::Node* node, const OptKe
         return true;
     }
 
-    auto shape_node_id = topo->GetEdgeById(shape_edge_id)->GetProducer();
-    auto shape_node = topo->GetNodeById(shape_node_id);
+    auto shape_node_id = topo->GetEdge(shape_edge_id)->GetProducer();
+    auto shape_node = topo->GetNode(shape_node_id);
     if (shape_node->GetType().name != "Shape") {
         return false;
     }
 
     auto attr_pair = data->attrs.find(shape_node_id);
     if (attr_pair != data->attrs.end()) {
-        auto param = (const ppl::nn::internal::ShapeOperationParam*)(attr_pair->second.get());
+        auto param = (const ShapeOperationParam*)(attr_pair->second.get());
         auto matrix = param->alpha.find(shape_edge_id)->second;
         if (matrix.numerator[1][matrix.MAXDIMSIZE] / matrix.denominator[1][matrix.MAXDIMSIZE] != 2) {
             return false;
@@ -101,10 +102,10 @@ const bool ChannelShuffleFusion::CanFuseSecondReshape(ir::Node* node, const OptK
         return true;
     }
 
-    auto shape_node_id = topo->GetEdgeById(shape_edge_id)->GetProducer();
+    auto shape_node_id = topo->GetEdge(shape_edge_id)->GetProducer();
     auto attr_pair = data->attrs.find(shape_node_id);
     if (attr_pair != data->attrs.end()) {
-        auto param = (const ppl::nn::internal::ShapeOperationParam*)(attr_pair->second.get());
+        auto param = (const ShapeOperationParam*)(attr_pair->second.get());
         auto matrix = param->alpha.find(shape_edge_id)->second;
         if (matrix.numerator[1][matrix.MAXDIMSIZE] / matrix.denominator[1][matrix.MAXDIMSIZE] != -1) {
             return false;
@@ -137,25 +138,25 @@ const bool ChannelShuffleFusion::CanFuse(ir::Node* node, const OptKernelOptions&
         }
 
         auto edge_id = node->GetOutput(0);
-        auto edge = topo->GetEdgeById(edge_id);
+        auto edge = topo->GetEdge(edge_id);
         if (topo->GetOutput(edge->GetName()) != INVALID_EDGEID) { // Can not fuse an output edge
             return false;
         }
-        if (i < 2 && topo->GetEdgeById(edge_id)->CalcConsumerCount() != 1) { // Can not fuse multi-consumer edge
+        if (i < 2 && topo->GetEdge(edge_id)->CalcConsumerCount() != 1) { // Can not fuse multi-consumer edge
             return false;
         }
-        auto next_node_id = topo->GetEdgeById(edge_id)->CreateConsumerIter().Get(); // Get Output(0)
-        node = topo->GetNodeById(next_node_id);
+        auto next_node_id = topo->GetEdge(edge_id)->CreateConsumerIter().Get(); // Get Output(0)
+        node = topo->GetNode(next_node_id);
     }
     return true;
 }
 
 const bool ChannelShuffleFusion::CanFuseUpAndDown(ir::Node* node, const OptKernelOptions& options) {
     auto topo = options.graph->topo.get();
-    auto pre_edge = topo->GetEdgeById(node->GetInput(0));
-    auto post_edge = topo->GetEdgeById(node->GetOutput(0));
-    auto pre_node = topo->GetNodeById(pre_edge->GetProducer());
-    auto post_node = topo->GetNodeById(post_edge->CreateConsumerIter().Get());
+    auto pre_edge = topo->GetEdge(node->GetInput(0));
+    auto post_edge = topo->GetEdge(node->GetOutput(0));
+    auto pre_node = topo->GetNode(pre_edge->GetProducer());
+    auto post_node = topo->GetNode(post_edge->CreateConsumerIter().Get());
 
     if (topo->GetOutput(pre_edge->GetName()) != INVALID_EDGEID ||
         topo->GetOutput(post_edge->GetName()) != INVALID_EDGEID) { // Can not fuse an output edge
@@ -176,12 +177,12 @@ const bool ChannelShuffleFusion::CanFuseUpAndDown(ir::Node* node, const OptKerne
 const RetCode ChannelShuffleFusion::FuseWithNextNodes(ir::Node* node, const OptKernelOptions& options) {
     auto topo = options.graph->topo.get();
     auto connect_edge_id = node->GetOutput(0);
-    auto next_node_id = topo->GetEdgeById(connect_edge_id)->CreateConsumerIter().Get(); // Get Output(0)
-    auto next_node = topo->GetNodeById(next_node_id);
+    auto next_node_id = topo->GetEdge(connect_edge_id)->CreateConsumerIter().Get(); // Get Output(0)
+    auto next_node = topo->GetNode(next_node_id);
 
     for (uint32_t i = 0; i < next_node->GetOutputCount(); ++i) {
         auto edge_id = next_node->GetOutput(i);
-        auto temp_edge = topo->GetEdgeById(edge_id);
+        auto temp_edge = topo->GetEdge(edge_id);
         temp_edge->SetProducer(node->GetId());
         if (i == 0) {
             node->ReplaceOutput(connect_edge_id, edge_id);
@@ -195,14 +196,14 @@ const RetCode ChannelShuffleFusion::FuseWithNextNodes(ir::Node* node, const OptK
         if (edge_id == connect_edge_id || edge_id == INVALID_EDGEID) {
             continue;
         }
-        ir::Edge* edge = topo->GetEdgeById(edge_id);
+        ir::Edge* edge = topo->GetEdge(edge_id);
         edge->DelConsumer(next_node->GetId());
         edge->AddConsumer(node->GetId());
         node->AddInput(edge_id);
     }
 
-    topo->DelEdgeById(connect_edge_id);
-    topo->DelNodeById(next_node->GetId());
+    topo->DelEdge(connect_edge_id);
+    topo->DelNode(next_node->GetId());
     options.info->kernels.erase(next_node_id);
     return RC_SUCCESS;
 }
@@ -211,31 +212,31 @@ const RetCode ChannelShuffleFusion::FuseWithLastNodes(ir::Node* next_node, const
     auto topo = options.graph->topo.get();
     auto next_node_id = next_node->GetId();
     auto connect_edge_id = next_node->GetInput(0);
-    auto node_id = topo->GetEdgeById(connect_edge_id)->GetProducer(); // Get Output(0)
-    auto node = topo->GetNodeById(node_id);
-    auto shape_edge = topo->GetEdgeById(next_node->GetInput(1));
-    auto shape_node = topo->GetNodeById(shape_edge->GetProducer());
+    auto node_id = topo->GetEdge(connect_edge_id)->GetProducer(); // Get Output(0)
+    auto node = topo->GetNode(node_id);
+    auto shape_edge = topo->GetEdge(next_node->GetInput(1));
+    auto shape_node = topo->GetNode(shape_edge->GetProducer());
 
     for (uint32_t i = 0; i < next_node->GetInputCount(); ++i) {
         auto edge_id = next_node->GetInput(i);
-        auto edge = topo->GetEdgeById(edge_id);
+        auto edge = topo->GetEdge(edge_id);
         edge->DelConsumer(next_node_id);
         if (edge_id == connect_edge_id || edge->CalcConsumerCount() == 0) {
-            topo->DelEdgeById(edge_id);
+            topo->DelEdge(edge_id);
         }
     }
 
     for (uint32_t i = 0; i < next_node->GetOutputCount(); ++i) {
         auto edge_id = next_node->GetOutput(i);
-        auto edge = topo->GetEdgeById(edge_id);
+        auto edge = topo->GetEdge(edge_id);
         node->ReplaceOutput(node->GetOutput(i), edge_id);
         edge->SetProducer(node_id);
     }
 
-    topo->DelNodeById(next_node_id);
+    topo->DelNode(next_node_id);
     if (shape_node) {
         options.info->kernels.erase(shape_node->GetId());
-        topo->DelNodeById(shape_node->GetId());
+        topo->DelNode(shape_node->GetId());
     }
     return RC_SUCCESS;
 }
@@ -251,10 +252,10 @@ const RetCode ChannelShuffleFusion::FuseNode(ir::Node* node, bool reliable, cons
         }
 
         if (CanFuseUpAndDown(node, options)) {
-            auto pre_edge = topo->GetEdgeById(node->GetInput(0));
-            auto post_edge = topo->GetEdgeById(node->GetOutput(0));
-            auto pre_node = topo->GetNodeById(pre_edge->GetProducer());
-            auto post_node = topo->GetNodeById(post_edge->CreateConsumerIter().Get());
+            auto pre_edge = topo->GetEdge(node->GetInput(0));
+            auto post_edge = topo->GetEdge(node->GetOutput(0));
+            auto pre_node = topo->GetNode(pre_edge->GetProducer());
+            auto post_node = topo->GetNode(post_edge->CreateConsumerIter().Get());
 
             LOG(DEBUG) << "Fuse pre_node[" << pre_node->GetName() << "] and post_node[" << post_node->GetName()
                        << "] into channel shuffle";
@@ -264,7 +265,7 @@ const RetCode ChannelShuffleFusion::FuseNode(ir::Node* node, bool reliable, cons
             FuseWithNextNodes(node, options);
         }
 
-        node->SetType(ir::Node::Type("ppl", "ChannelShuffle", 1));
+        node->SetType(ir::Node::Type("pmx", "ChannelShuffle", 1));
         // node->SetName(node_name);
         auto creator = OptKernelCreatorManager::GetInstance()->Find(node->GetType().domain, node->GetType().name,
                                                                     node->GetType().version);
@@ -278,7 +279,7 @@ const RetCode ChannelShuffleFusion::FuseNode(ir::Node* node, bool reliable, cons
             LOG(ERROR) << "create Kernel failed: oom";
             return RC_UNSUPPORTED;
         }
-        auto param = (ppl::nn::internal::ChannelShuffleParam*)opt_kernel->GetParam();
+        auto param = (ChannelShuffleParam*)opt_kernel->GetParam();
         if (param == nullptr) {
             LOG(ERROR) << "Can not find param.";
             return RC_NOT_FOUND;

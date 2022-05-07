@@ -177,7 +177,7 @@ static RetCode ParseNodeInfo(const ::onnx::NodeProto& pb_node, const ParamParser
         return RC_SUCCESS;
     }
 
-    auto param = VoidPtr(parser_info->create_param(), parser_info->destroy_param);
+    unique_ptr<ir::Attr, void (*)(ir::Attr*)> param(parser_info->create_param(), parser_info->destroy_param);
     auto status = parser_info->parse_param(pb_node, args, node, param.get());
     if (status != RC_SUCCESS) {
         LOG(ERROR) << "parse attr of node[" << node_name << "] failed: " << GetRetCodeStr(status);
@@ -213,7 +213,7 @@ static RetCode ParseGraphOutput(const ::onnx::GraphProto& pb_graph, ir::GraphTop
     for (int i = 0; i < pb_graph.output_size(); ++i) {
         const ::onnx::ValueInfoProto& pb_output = pb_graph.output(i);
 
-        auto edge = topo->GetEdgeByName(pb_output.name());
+        auto edge = topo->GetEdge(pb_output.name());
         if (!edge) {
             LOG(ERROR) << "cannot find output[" << pb_output.name() << "] in edges.";
             return RC_NOT_FOUND;

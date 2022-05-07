@@ -84,7 +84,22 @@ RetCode OptGraph::Init(ir::Graph* graph, RuntimePartitionInfo* info, ArmEngineOp
     info_ = info;
     options_ = options;
 
-    auto status = InitKernels(graph);
+    OptKernelOptions opt_kernel_options;
+    opt_kernel_options.graph_data = graph_->data.get(); // only a part of info can be used on Init stage
+    opt_kernel_options.graph_topo = graph_->topo.get();
+    opt_kernel_options.info = info_;
+    opt_kernel_options.engine_options = options_;
+
+    // do before init optimize
+    const auto opt_rule_manager = OptRuleManager::Instance();
+    const auto max_opt_level = opt_rule_manager->GetMaxOptLevel(options_->graph_optimization_level);
+    auto status = opt_rule_manager->ApplyRules(opt_kernel_options, max_opt_level, "BeforeInitOptimize", "");
+    if (status != RC_SUCCESS) {
+        LOG(ERROR) << "Run BeforeInitOptimize failed: " << GetRetCodeStr(status);
+        return status;
+    }
+
+    status = InitKernels(graph);
     if (status != RC_SUCCESS) {
         LOG(ERROR) << "init kernels failed: " << GetRetCodeStr(status);
         return status;
@@ -116,8 +131,8 @@ RetCode OptGraph::AddReorderOp(const OptKernelOptions& options, const edgeid_t& 
                                const ppl::common::dataformat_t& reorder_out_format,
                                const ppl::common::datatype_t& reorder_in_type,
                                const ppl::common::datatype_t& reorder_out_type) {
-    auto edge = graph_->topo->GetEdgeById(edge_id);
-    auto node = graph_->topo->GetNodeById(node_id);
+    auto edge = graph_->topo->GetEdge(edge_id);
+    auto node = graph_->topo->GetNode(node_id);
 
     std::string reorder_node_name = "";
     if (reorder_type == REORDER_INPUT) {
@@ -134,7 +149,7 @@ RetCode OptGraph::AddReorderOp(const OptKernelOptions& options, const edgeid_t& 
         return RC_EXISTS;
     }
     ir::Node* reorder_node = node_ret_pair.first;
-    reorder_node->SetType(ir::Node::Type("ppl", "Reorder", 1));
+    reorder_node->SetType(ir::Node::Type("pmx", "Reorder", 1));
 
     std::string reorder_edge_name = reorder_node_name + "_edge";
     auto edge_ret_pair = graph_->topo->AddEdge(reorder_edge_name);
@@ -366,10 +381,10 @@ RetCode OptGraph::TryToInferType(ArmDevice* device) {
 
     /** try to infer types for each node's input and output*/
     for (auto node_id : sorted_nodes) {
-        auto node = graph_->topo->GetNodeById(node_id);
+        auto node = graph_->topo->GetNode(node_id);
         bool all_inputs_has_type = true;
         for (uint32_t i = 0; i < node->GetInputCount(); i++) {
-            auto input_edge = graph_->topo->GetEdgeById(node->GetInput(i));
+            auto input_edge = graph_->topo->GetEdge(node->GetInput(i));
             if (!input_edge) { // some op may have emtpy input
                 continue;
             }
@@ -405,10 +420,10 @@ RetCode OptGraph::TryToInferDims(ArmDevice* device) {
     });
 
     for (auto node_id : sorted_nodes) {
-        auto node = graph_->topo->GetNodeById(node_id);
+        auto node = graph_->topo->GetNode(node_id);
         bool all_inputs_has_dims = true;
         for (uint32_t i = 0; i < node->GetInputCount(); i++) {
-            auto input_edge = graph_->topo->GetEdgeById(node->GetInput(i));
+            auto input_edge = graph_->topo->GetEdge(node->GetInput(i));
             if (!input_edge) { // some op may have emtpy input
                 continue;
             }

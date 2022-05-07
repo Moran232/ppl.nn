@@ -23,7 +23,6 @@
 #include "ppl/kernel/x86/common/general_include.h"
 #include "ppl/kernel/x86/common/conv_common.h"
 #include "ppl/common/allocator.h"
-#include "ppl/common/sys.h"
 
 namespace ppl { namespace kernel { namespace x86 {
 
@@ -70,7 +69,7 @@ struct conv2d_fp32_param {
     }
 };
 
-ppl::common::RetCode conv2d_ref_fp32(
+ppl::common::RetCode conv2d_fp32_ref(
     const ppl::nn::TensorShape *src_shape,
     const ppl::nn::TensorShape *sum_src_shape,
     const ppl::nn::TensorShape *dst_shape,

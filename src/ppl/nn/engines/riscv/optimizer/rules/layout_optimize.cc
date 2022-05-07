@@ -34,8 +34,8 @@ static ppl::common::RetCode AddReorderOp(const OptKernelOptions& options, const 
     auto info = options.info;
     auto& tensors = *options.tensors;
 
-    auto edge = graph_topo->GetEdgeById(edge_id);
-    auto node = graph_topo->GetNodeById(node_id);
+    auto edge = graph_topo->GetEdge(edge_id);
+    auto node = graph_topo->GetNode(node_id);
 
     std::string reorder_node_name = "";
     if (reorder_type == REORDER_INPUT) {
@@ -52,7 +52,7 @@ static ppl::common::RetCode AddReorderOp(const OptKernelOptions& options, const 
         return ppl::common::RC_EXISTS;
     }
     ir::Node* reorder_node = node_ret_pair.first; // TODO: change name for easy to understand
-    reorder_node->SetType(ir::Node::Type("ppl", "Reorder", 1));
+    reorder_node->SetType(ir::Node::Type("pmx", "Reorder", 1));
 
     std::string reorder_edge_name = reorder_node_name + "_edge";
     auto edge_ret_pair = graph_topo->AddEdge(reorder_edge_name);

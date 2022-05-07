@@ -19,7 +19,6 @@
 #include <map>
 
 #include "ppl/nn/optimizers/fuse_parallel_node_optimizer.h"
-#include "ppl/nn/params/param_utils_manager.h"
 #include "ppl/nn/common/logger.h"
 using namespace std;
 using namespace ppl::common;
@@ -75,19 +74,13 @@ static bool CanFuseAsOneNode(const ir::Graph* graph, const ir::Node* node_0, con
         }
     }
 
-    auto op_utils = ParamUtilsManager::GetInstance()->Find(node_0->GetType().domain, node_0->GetType().name,
-                                                        node_0->GetType().version);
-    if (!op_utils) {
-        return true;
-    }
-
     auto param_it_0 = graph->data->attrs.find(node_0->GetId());
     auto param_it_1 = graph->data->attrs.find(node_1->GetId());
     if (param_it_0 == graph->data->attrs.end() || param_it_1 == graph->data->attrs.end()) {
         return false;
     }
 
-    return op_utils->equal(param_it_0->second.get(), param_it_1->second.get());
+    return param_it_0->second->Equals(param_it_1->second.get());
 }
 
 struct SkippedNodeType final {
@@ -111,7 +104,7 @@ ppl::common::RetCode FuseParallelNodeOptimizer::Optimize(ir::Graph* graph) const
 
         std::map<ir::Node*, std::vector<ir::Node*>> fuse_op_groups;
         for (auto node_it = edge->CreateConsumerIter(); node_it.IsValid(); node_it.Forward()) {
-            auto node = graph->topo->GetNodeById(node_it.Get());
+            auto node = graph->topo->GetNode(node_it.Get());
             auto& node_type = node->GetType();
 
             bool skipped = false;
@@ -144,27 +137,27 @@ ppl::common::RetCode FuseParallelNodeOptimizer::Optimize(ir::Graph* graph) const
             for (uint32_t i = 0; i < to_merge_nodes.size(); i++) {
                 auto to_merge_node = to_merge_nodes[i];
                 for (uint32_t j = 0; j < to_merge_node->GetInputCount(); j++) {
-                    auto input_edge = graph->topo->GetEdgeById(to_merge_node->GetInput(j));
+                    auto input_edge = graph->topo->GetEdge(to_merge_node->GetInput(j));
                     if (input_edge) {
                         input_edge->DelConsumer(to_merge_node->GetId());
                     }
                 }
                 for (uint32_t j = 0; j < to_merge_node->GetOutputCount(); j++) {
-                    auto output_edge = graph->topo->GetEdgeById(to_merge_node->GetOutput(j));
+                    auto output_edge = graph->topo->GetEdge(to_merge_node->GetOutput(j));
                     for (auto successor_it = output_edge->CreateConsumerIter(); successor_it.IsValid();
                          successor_it.Forward()) {
-                        auto successor_node = graph->topo->GetNodeById(successor_it.Get());
+                        auto successor_node = graph->topo->GetNode(successor_it.Get());
                         successor_node->ReplaceInput(output_edge->GetId(), merge_node->GetOutput(j));
                         successor_node->ReplaceExtraInput(output_edge->GetId(),
                                                           merge_node->GetOutput(j)); // TODO: check if has error
-                        graph->topo->GetEdgeById(merge_node->GetOutput(j))->AddConsumer(successor_node->GetId());
+                        graph->topo->GetEdge(merge_node->GetOutput(j))->AddConsumer(successor_node->GetId());
                     }
                 }
 
                 for (uint32_t j = 0; j < to_merge_node->GetOutputCount(); j++) {
-                    graph->topo->DelEdgeById(to_merge_node->GetOutput(j));
+                    graph->topo->DelEdge(to_merge_node->GetOutput(j));
                 }
-                graph->topo->DelNodeById(to_merge_node->GetId());
+                graph->topo->DelNode(to_merge_node->GetId());
             }
         }
     }

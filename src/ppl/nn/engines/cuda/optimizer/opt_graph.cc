@@ -21,7 +21,7 @@
 #include "ppl/nn/engines/cuda/engine.h"
 #include "ppl/nn/engines/cuda/optimizer/opt_kernel_creator_manager.h"
 #include "ppl/nn/engines/cuda/optimizer/algos/algo_graph.h"
-#include "ppl/nn/engines/cuda/optimizer/ops/ppl/bridge_op.h"
+#include "ppl/nn/engines/cuda/optimizer/ops/pmx/bridge_op.h"
 #include "ppl/nn/engines/utils.h"
 
 using namespace std;
@@ -102,7 +102,7 @@ RetCode OptGraph::UpdateDims(const utils::SharedResource& resource) {
     IOinfo.SetAcquireFunc(acquire_tensor_func_);
 
     for (uint32_t i = 0; i < sorted_node_ids_.size(); ++i) {
-        auto node = topo->GetNodeById(sorted_node_ids_[i]);
+        auto node = topo->GetNode(sorted_node_ids_[i]);
         IOinfo.SetNode(node);
 
         CudaOptKernel* kernel = (CudaOptKernel*)(info_->kernels.find(node->GetId())->second.get());
@@ -118,7 +118,7 @@ RetCode OptGraph::UpdateDims(const utils::SharedResource& resource) {
                 continue;
             }
 
-            auto edge = topo->GetEdgeById(edge_id);
+            auto edge = topo->GetEdge(edge_id);
             auto impl_pair = tensor_impls_.insert(
                 make_pair(edge_id, unique_ptr<TensorImpl>(new TensorImpl(edge, TENSORTYPE_NORMAL))));
             if (impl_pair.second) {
@@ -176,7 +176,7 @@ RetCode OptGraph::UpdateDims(const utils::SharedResource& resource) {
             if (edge_id == INVALID_EDGEID) {
                 continue;
             }
-            auto edge = topo->GetEdgeById(edge_id);
+            auto edge = topo->GetEdge(edge_id);
             tensor_impls_.insert(make_pair(edge_id, unique_ptr<TensorImpl>(new TensorImpl(edge, TENSORTYPE_NORMAL))));
         }
 
@@ -187,7 +187,7 @@ RetCode OptGraph::UpdateDims(const utils::SharedResource& resource) {
             std::set<uint32_t> illegal_inputs;
             for (uint32_t j = 0; j < node->GetInputCount(); ++j) {
                 auto preedge_id = node->GetInput(j);
-                auto prenode_id = topo->GetEdgeById(preedge_id)->GetProducer();
+                auto prenode_id = topo->GetEdge(preedge_id)->GetProducer();
                 if (illegal_dims_.find(prenode_id) == illegal_dims_.end()) {
                     illegal_inputs.emplace(j);
                 }
@@ -209,7 +209,7 @@ RetCode OptGraph::FuseOperator(const utils::SharedResource& resource) {
     int32_t index = LastLegalNodeIndex();
 
     for (int32_t i = sorted_node_ids_.size() - 1; i >= 0; --i) {
-        auto node = topo->GetNodeById(sorted_node_ids_[i]);
+        auto node = topo->GetNode(sorted_node_ids_[i]);
         if (node) {
             auto fuse = fs_filter_manager->FindFusion(node->GetType().name);
             if (fuse) {
@@ -237,12 +237,12 @@ RetCode OptGraph::AddBridgeKernels(const utils::SharedResource& resource) {
             if (edge_id == INVALID_EDGEID) {
                 continue;
             }
-            auto edge = topo->GetEdgeById(edge_id);
+            auto edge = topo->GetEdge(edge_id);
             if (edge->GetName().find("Bridge_Edge") != string::npos) {
                 continue;
             }
 
-            auto creator = OptKernelCreatorManager::GetInstance()->Find("ppl", "Bridge", 1);
+            auto creator = OptKernelCreatorManager::GetInstance()->Find("pmx", "Bridge", 1);
             auto ret_pair = topo->AddNode("Bridge_Node_" + node->GetName() + "_" + edge->GetName());
             if (!ret_pair.second) {
                 LOG(ERROR) << "create a new node for [" << edge->GetName() << "] failed.";
@@ -250,13 +250,13 @@ RetCode OptGraph::AddBridgeKernels(const utils::SharedResource& resource) {
             }
             auto new_node = ret_pair.first;
 
-            new_node->SetType(ir::Node::Type("ppl", "Bridge", 1));
+            new_node->SetType(ir::Node::Type("pmx", "Bridge", 1));
             auto bridge_kernel = unique_ptr<CudaOptKernel>((*creator)(new_node));
             ((BridgeOp*)bridge_kernel.get())->AddInternalBridgeNode(node, new_node, edge, graph_);
 
             auto preedge_id = new_node->GetInput(0);
             auto postedge_id = new_node->GetOutput(0);
-            auto new_edge = topo->GetEdgeById(postedge_id);
+            auto new_edge = topo->GetEdge(postedge_id);
             auto impl_pair = tensor_impls_.insert(
                 make_pair(postedge_id, unique_ptr<TensorImpl>(new TensorImpl(new_edge, TENSORTYPE_NORMAL))));
             auto pre_shape = tensor_impls_.find(preedge_id)->second.get();
@@ -272,10 +272,10 @@ RetCode OptGraph::AddBridgeKernels(const utils::SharedResource& resource) {
         }
 
         for (uint32_t j = 0; j < node->GetOutputCount(); ++j) {
-            auto edge = topo->GetEdgeById(node->GetOutput(j));
+            auto edge = topo->GetEdge(node->GetOutput(j));
             if (topo->GetOutput(edge->GetName()) != INVALID_EDGEID || // it is marked as an output node
                 edge->CalcConsumerCount() == 0) { // it is an finel node for the graph
-                auto creator = OptKernelCreatorManager::GetInstance()->Find("ppl", "Bridge", 1);
+                auto creator = OptKernelCreatorManager::GetInstance()->Find("pmx", "Bridge", 1);
 
                 auto ret_pair = topo->AddNode("Bridge_Final_" + node->GetName() + "_" + edge->GetName());
                 if (!ret_pair.second) {
@@ -284,13 +284,13 @@ RetCode OptGraph::AddBridgeKernels(const utils::SharedResource& resource) {
                 }
                 auto new_node = ret_pair.first;
 
-                new_node->SetType(ir::Node::Type("ppl", "Bridge", 1));
+                new_node->SetType(ir::Node::Type("pmx", "Bridge", 1));
                 auto bridge_kernel = unique_ptr<CudaOptKernel>((*creator)(new_node));
                 ((BridgeOp*)bridge_kernel.get())->AddFinalBridgeNode(node, new_node, edge, graph_);
 
                 auto preedge_id = new_node->GetInput(0);
                 auto postedge_id = new_node->GetOutput(0);
-                auto new_edge = topo->GetEdgeById(preedge_id);
+                auto new_edge = topo->GetEdge(preedge_id);
                 auto impl_pair = tensor_impls_.insert(
                     make_pair(preedge_id, unique_ptr<TensorImpl>(new TensorImpl(new_edge, TENSORTYPE_NORMAL))));
                 auto post_shape = tensor_impls_.find(postedge_id)->second.get();
@@ -389,7 +389,7 @@ RetCode OptGraph::UpdateType() {
     IOinfo.SetAcquireFunc(acquire_tensor_func_);
 
     for (uint32_t i = 0; i < sorted_node_ids_.size(); ++i) {
-        auto node = topo->GetNodeById(sorted_node_ids_[i]);
+        auto node = topo->GetNode(sorted_node_ids_[i]);
 
         IOinfo.SetNode(node);
         CudaOptKernel* kernel = (CudaOptKernel*)(info_->kernels.find(node->GetId())->second.get());
@@ -425,7 +425,7 @@ RetCode OptGraph::UpdateType() {
 
         // it is an output node
         for (uint32_t j = 0; j < node->GetOutputCount(); ++j) {
-            auto edge = topo->GetEdgeById(node->GetOutput(j));
+            auto edge = topo->GetEdge(node->GetOutput(j));
             if (edge->CalcConsumerCount() == 0) {
                 auto out_shape = IOinfo.GetOutput<TensorImpl>(j)->GetShape();
                 if (out_shape->GetDataType() == DATATYPE_FLOAT16 || out_shape->GetDataType() == DATATYPE_INT8)
@@ -452,7 +452,7 @@ RetCode OptGraph::SelectAlgos(const utils::SharedResource& resource, CudaDevice*
     AlgoGraph algo_graph(topo);
     // calculate the least time consuming
     for (uint32_t i = 0; i < sorted_node_ids_.size(); ++i) {
-        auto node = topo->GetNodeById(sorted_node_ids_[i]);
+        auto node = topo->GetNode(sorted_node_ids_[i]);
         CudaOptKernel* kernel = (CudaOptKernel*)(info_->kernels.find(node->GetId())->second.get());
         LOG(INFO) <<i <<" create Node [" << node->GetName() <<"]";
         auto status = algo_graph.CreateNode(node, kernel);
@@ -471,8 +471,9 @@ RetCode OptGraph::SelectAlgos(const utils::SharedResource& resource, CudaDevice*
     // select algorithm method and its format
     for (int32_t i = sorted_node_ids_.size() - 1; i >= 0; --i) {
         auto node_id = sorted_node_ids_[i];
-        auto node = topo->GetNodeById(node_id);
+        auto node = topo->GetNode(node_id);
         LOG(INFO) << i << " determine Node ["<< node->GetName()<<"]";
+
         auto kernel = info_->kernels.find(node_id);
         if (kernel == info_->kernels.end()) {
             LOG(ERROR) << "Can not find kernel[" << node->GetName() << "].";
