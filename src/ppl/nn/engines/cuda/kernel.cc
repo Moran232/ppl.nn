@@ -146,6 +146,17 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
         }
         auto tensor_size = tensor->GetShape()->GetBytesIncludingPadding();
         total_size += tensor_size;
+        auto tensor_dim_count = tensor->GetShape()->GetDimCount();
+        std::string tensor_dims = "";
+        for (uint32_t j = 0; j < tensor_dim_count; ++j) {
+            tensor_dims += std::to_string(tensor->GetShape()->GetDim(j)) + " ";
+        }
+        LOG(DEBUG) << "input tensor size " << tensor_size;
+        LOG(DEBUG) << "input tensor datatype " << tensor->GetShape()->GetDataType() << " tensor dataformat "
+                   << tensor->GetShape()->GetDataFormat();
+        LOG(DEBUG) << "input tensor dimcount " << tensor_dim_count;
+        LOG(DEBUG) << "input tensor dims " << tensor_dims;
+        total_size += tensor_size; 
     }
     for (uint32_t i = 0; i < ctx->GetOutputCount(); ++i) {
         auto tensor = ctx->GetOutput<TensorImpl>(i);
@@ -155,11 +166,11 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
         for (uint32_t j = 0; j < tensor_dim_count; ++j) {
             tensor_dims += std::to_string(tensor->GetShape()->GetDim(j)) + " ";
         }
-        LOG(DEBUG) << "tensor size " << tensor_size;
-        LOG(DEBUG) << "tensor datatype " << tensor->GetShape()->GetDataType() << " tensor dataformat "
+        LOG(DEBUG) << "output tensor size " << tensor_size;
+        LOG(DEBUG) << "output tensor datatype " << tensor->GetShape()->GetDataType() << " tensor dataformat "
                    << tensor->GetShape()->GetDataFormat();
-        LOG(DEBUG) << "tensor dimcount " << tensor_dim_count;
-        LOG(DEBUG) << "tensor dims " << tensor_dims;
+        LOG(DEBUG) << "output tensor dimcount " << tensor_dim_count;
+        LOG(DEBUG) << "output tensor dims " << tensor_dims;
         total_size += tensor_size;
     }
     auto run_begin_ts = std::chrono::system_clock::now();
