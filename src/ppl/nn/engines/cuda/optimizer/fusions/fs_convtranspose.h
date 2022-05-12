@@ -15,26 +15,24 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef _ST_HPC_PPL_NN_ENGINES_CUDA_OPTIMIZER_FUSIONS_FS_GEMM_H_
-#define _ST_HPC_PPL_NN_ENGINES_CUDA_OPTIMIZER_FUSIONS_FS_GEMM_H_
+#ifndef _ST_HPC_PPL_NN_ENGINES_CUDA_OPTIMIZER_FUSIONS_FS_CONVTRANSPOSE_H_
+#define _ST_HPC_PPL_NN_ENGINES_CUDA_OPTIMIZER_FUSIONS_FS_CONVTRANSPOSE_H_
 
 #include "ppl/nn/engines/cuda/optimizer/fusions/fusion.h"
 
 namespace ppl { namespace nn { namespace cuda {
 
-class GemmFusion : public Fusion {
+class ConvTransposeFusion : public Fusion {
 public:
     const ppl::common::RetCode FuseNode(ir::Node* node, bool reliable, const OptKernelOptions& options) override;
 
 private:
     const bool CanFuse(ir::Node* nextnode, const OptKernelOptions& options, uint32_t flag);
-    const ppl::common::RetCode FuseGemmWithNextNode(ir::Node* node, ir::Node* nextnode,
+    const ppl::common::RetCode FuseConvTransposeWithNextNode(ir::Node* node, ir::Node* nextnode,
                                                     const OptKernelOptions& options);
 
 private:
-    std::set<std::string> fuse_type{"Relu",
-                                    "Clip"
-                                    "Sigmoid"};
+    std::set<std::string> fuse_type{"Relu"};
 };
 
 }}} // namespace ppl::nn::cuda
