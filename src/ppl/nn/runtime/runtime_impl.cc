@@ -228,6 +228,12 @@ static RetCode InitRuntimeGraphResourceConstants(const ir::GraphTopo* topo, cons
                 tensor->SetBuffer(c->second.GetBufferDesc(), c->second.GetDevice());
                 *tensor->GetShape() = shape_ref->second;
                 graph->edgeid2object[eid] = tensor;
+                
+                TensorShape dst_desc = *tensor->GetShape();
+                auto bytes = dst_desc.GetBytesIncludingPadding();
+                vector<char> buffer(bytes);
+                auto status = tensor->CopyToHost(buffer.data());
+                LOG(INFO)<<"edge ["<<edge->GetName()<< "]"<<*(int32_t*)buffer.data();
             }
         }
     }

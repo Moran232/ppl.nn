@@ -23,6 +23,7 @@
 #include "ppl/nn/engines/cuda/optimizer/algos/algo_graph.h"
 #include "ppl/nn/engines/cuda/optimizer/ops/pmx/bridge_op.h"
 #include "ppl/nn/engines/utils.h"
+#include "ppl/nn/auxtools/to_graphviz.h"
 
 using namespace std;
 using namespace ppl::common;
@@ -195,7 +196,8 @@ RetCode OptGraph::UpdateDims(const utils::SharedResource& resource) {
             kernel->InferUnsafeDims(&IOinfo, &illegal_inputs);
         }
     }
-
+    auto s = utils::ToGraphviz(topo);
+    LOG(INFO) <<s;
     LOG(DEBUG) << "Create " << tensor_impls_.size() << " TensorImpl";
     return RC_SUCCESS;
 }
@@ -500,9 +502,11 @@ RetCode OptGraph::LoadConstants(CudaDevice* device) {
         if (node->GetType().name != "Bridge") {
             continue;
         }
-
+        LOG(INFO)<<"Node --" << node->GetName();
         auto preedge_id = node->GetInput(0);
         auto postedge_id = node->GetOutput(0);
+        LOG(INFO)<< "node input: "<< preedge_id << " node output: "<<postedge_id;
+
         const TensorShape& preshape = *tensor_impls_.find(preedge_id)->second->GetShape();
         const TensorShape& postshape = *tensor_impls_.find(postedge_id)->second->GetShape();
 
@@ -580,6 +584,20 @@ RetCode OptGraph::DoOptimize(const utils::SharedResource& resource, CudaDevice* 
         LOG(ERROR) << "init kernels failed: " << GetRetCodeStr(status);
         return status;
     }
+    LOG(INFO)<<"inital kernels";
+    auto topo = graph_->topo.get();
+    auto graph_data = graph_->data.get();
+    for (auto iter = topo->CreateNodeIter(); iter->IsValid(); iter->Forward()) {
+        auto node = iter->Get();
+        for (uint32_t i = 0;i<node->GetInputCount(); ++i) {
+            auto edge_id = node->GetInput(i);
+            auto constant = graph_data->constants.find(edge_id);
+            if(constant != graph_data->constants.end()){
+                LOG(INFO)<< "Node["<< node->GetName() << "] input["<<i<<"]" << 
+                         "edgeid[" << edge_id << "]"<<*(int64_t*)(constant->second.data.data());
+            }
+        }
+    }
 
     status = UpdateDims(resource);
     if (status != RC_SUCCESS) {
@@ -610,13 +628,14 @@ RetCode OptGraph::DoOptimize(const utils::SharedResource& resource, CudaDevice* 
         LOG(ERROR) << "Update type failed: " << GetRetCodeStr(status);
         return status;
     }
-
+    LOG(INFO)<<"selsect algos";
     status = SelectAlgos(resource, device);
     if (status != RC_SUCCESS) {
         LOG(ERROR) << "Selec algos for each kernel failed: " << GetRetCodeStr(status);
         return status;
     }
 
+    LOG(INFO)<<"Load Constants";
     status = LoadConstants(device);
     if (status != RC_SUCCESS) {
         LOG(ERROR) << "Load constant tensors failed: " << GetRetCodeStr(status);
@@ -634,7 +653,14 @@ RetCode OptGraph::DoOptimize(const utils::SharedResource& resource, CudaDevice* 
         LOG(ERROR) << "Fuse operators failed: " << GetRetCodeStr(status);
         return status;
     }
-
+    LOG(INFO)<<"fuse operator";
+    for (auto iter=info_->constants.begin(); iter != info_->constants.end(); iter++) {
+        auto &tensorbufferinfo = iter->second;
+        auto bytes = tensorbufferinfo.GetShape()->GetBytesIncludingPadding();
+        int64_t* buffer=(int64_t*)malloc(bytes);
+        auto status = tensorbufferinfo.GetDevice()->CopyToHost(buffer, tensorbufferinfo.GetBufferDesc(), *tensorbufferinfo.GetShape());
+        LOG(INFO)<<"edge id["<< iter->first<< "]"<< *(int64_t*)buffer;
+    }
     return RC_SUCCESS;
 }
 
