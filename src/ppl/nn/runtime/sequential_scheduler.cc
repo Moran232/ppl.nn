@@ -22,6 +22,7 @@
 #include "ppl/nn/common/logger.h"
 #include "ppl/nn/runtime/sequential_scheduler.h"
 #include "ppl/nn/runtime/scheduler_common.h"
+#include "ppl/nn/auxtools/to_graphviz.h"
 using namespace std;
 using namespace ppl::common;
 
@@ -30,6 +31,8 @@ namespace ppl { namespace nn {
 RetCode SequentialScheduler::Init(const ir::GraphTopo* topo, const RuntimeAuxInfo* aux_info, RuntimeGraphResource* g) {
     graph_ = g;
     topo_ = topo;
+    auto s = utils::ToGraphviz(topo);
+    LOG(INFO) <<s;
     aux_info_ = aux_info;
     return RC_SUCCESS;
 }
