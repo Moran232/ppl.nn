@@ -15,8 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <stdio.h>
-
 #include "ppl/kernel/x86/common/internal_include.h"
 #include "ppl/kernel/x86/common/avx_tools.h"
 #include "ppl/kernel/x86/fp32/gemm.h"
@@ -86,7 +84,7 @@ void gemv_t_kernel_fp32_fma(
                 if (u_n > 2) rB2 += u_k;
             }
 #define _MM256_RSUM_PS(YMM, SREG) do {\
-    float v[8];\
+    float v[K_REG_ELTS];\
     _mm256_storeu_ps(v, (YMM));\
     (SREG) = ((v[0] + v[1]) + (v[2] + v[3])) + ((v[4] + v[5]) + (v[6] + v[7]));\
 } while(0)
@@ -166,6 +164,7 @@ void gemv_n_kernel_fp32_fma(
     const int64_t N,
     const int64_t K,
     const int64_t ldb,
+    const float alpha,
     const gemm_post_t post,
     float *C)
 {
@@ -183,10 +182,15 @@ void gemv_n_kernel_fp32_fma(
         const bool do_relu_max = k + u_k >= K && (post == gemm_post::RELU || post == gemm_post::RELU6);
         const bool do_relu_min = k + u_k >= K && post == gemm_post::RELU6;
 
-        if (u_k > 0) ymm0 = _mm256_set1_ps(lA[0]);
-        if (u_k > 1) ymm1 = _mm256_set1_ps(lA[1]);
-        if (u_k > 2) ymm2 = _mm256_set1_ps(lA[2]);
-        if (u_k > 3) ymm3 = _mm256_set1_ps(lA[3]);
+        float a0, a1, a2, a3;
+        if (u_k > 0) a0 = lA[0] * alpha;
+        if (u_k > 1) a1 = lA[1] * alpha;
+        if (u_k > 2) a2 = lA[2] * alpha;
+        if (u_k > 3) a3 = lA[3] * alpha;
+        if (u_k > 0) ymm0 = _mm256_set1_ps(a0);
+        if (u_k > 1) ymm1 = _mm256_set1_ps(a1);
+        if (u_k > 2) ymm2 = _mm256_set1_ps(a2);
+        if (u_k > 3) ymm3 = _mm256_set1_ps(a3);
 
         float *rC = C;
         const float *rB0;
@@ -294,10 +298,10 @@ void gemv_n_kernel_fp32_fma(
         }
         while (n > 0) {
             float r;
-            if (u_k > 0) r = rB0[0 * ldb] * lA[0];
-            if (u_k > 1) r += rB0[1 * ldb] * lA[1];
-            if (u_k > 2) r += rB2[0 * ldb] * lA[2];
-            if (u_k > 3) r += rB2[1 * ldb] * lA[3];
+            if (u_k > 0) r = rB0[0 * ldb] * a0;
+            if (u_k > 1) r += rB0[1 * ldb] * a1;
+            if (u_k > 2) r += rB2[0 * ldb] * a2;
+            if (u_k > 3) r += rB2[1 * ldb] * a3;
             r += rC[0];
             if (do_relu_max) r = max(r, 0.0f);
             if (do_relu_min) r = min(r, 6.0f);
@@ -314,7 +318,7 @@ void gemv_n_kernel_fp32_fma(
 }
 
 template<gemm_v_type_t typesum, gemm_m_type_t typebias>
-void gemv_fp32_apply_beta_avx(
+void gemv_fp32_apply_beta_fma(
     const float *bias,
     const float *sum,
     const int64_t N,
@@ -433,7 +437,7 @@ ppl::common::RetCode gemv_operation_fp32_fma(
         return ppl::common::RC_SUCCESS;
     }
 
-    if (typeB == gemm_m_type::TRANS) {
+    if (typeB == gemm_m_type::TRANS || K == 0) {
         const int64_t MAX_U_N = 4;
         const int64_t n_body = round(N, MAX_U_N);
         const int64_t n_tail = N - n_body;
@@ -458,17 +462,17 @@ ppl::common::RetCode gemv_operation_fp32_fma(
         if (n_tail == 2) gemv_t_kernel_fp32_fma<2>(A, lB, lbias, lsum, typebias, typesum, n_tail, K, ldb, alpha, beta, beta_bias, beta_sum, post, lC);
         if (n_tail == 1) gemv_t_kernel_fp32_fma<1>(A, lB, lbias, lsum, typebias, typesum, n_tail, K, ldb, alpha, beta, beta_bias, beta_sum, post, lC);
     } else {
-        auto apply_beta_func = gemv_fp32_apply_beta_avx<gemm_m_type::EMPTY, gemm_v_type::EMPTY>;
+        auto apply_beta_func = gemv_fp32_apply_beta_fma<gemm_m_type::EMPTY, gemm_v_type::EMPTY>;
         if (typesum == gemm_m_type::NOTRANS) {
-            if (typebias == gemm_v_type::EMPTY) apply_beta_func = gemv_fp32_apply_beta_avx<gemm_m_type::NOTRANS, gemm_v_type::EMPTY>;
-            if (typebias == gemm_v_type::SCALAR) apply_beta_func = gemv_fp32_apply_beta_avx<gemm_m_type::NOTRANS, gemm_v_type::SCALAR>;
-            if (typebias == gemm_v_type::COL_VEC) apply_beta_func = gemv_fp32_apply_beta_avx<gemm_m_type::NOTRANS, gemm_v_type::COL_VEC>;
-            if (typebias == gemm_v_type::ROW_VEC) apply_beta_func = gemv_fp32_apply_beta_avx<gemm_m_type::NOTRANS, gemm_v_type::ROW_VEC>;
+            if (typebias == gemm_v_type::EMPTY) apply_beta_func = gemv_fp32_apply_beta_fma<gemm_m_type::NOTRANS, gemm_v_type::EMPTY>;
+            if (typebias == gemm_v_type::SCALAR) apply_beta_func = gemv_fp32_apply_beta_fma<gemm_m_type::NOTRANS, gemm_v_type::SCALAR>;
+            if (typebias == gemm_v_type::COL_VEC) apply_beta_func = gemv_fp32_apply_beta_fma<gemm_m_type::NOTRANS, gemm_v_type::COL_VEC>;
+            if (typebias == gemm_v_type::ROW_VEC) apply_beta_func = gemv_fp32_apply_beta_fma<gemm_m_type::NOTRANS, gemm_v_type::ROW_VEC>;
         } else {
-            if (typebias == gemm_v_type::EMPTY) apply_beta_func = gemv_fp32_apply_beta_avx<gemm_m_type::EMPTY, gemm_v_type::EMPTY>;
-            if (typebias == gemm_v_type::SCALAR) apply_beta_func = gemv_fp32_apply_beta_avx<gemm_m_type::EMPTY, gemm_v_type::SCALAR>;
-            if (typebias == gemm_v_type::COL_VEC) apply_beta_func = gemv_fp32_apply_beta_avx<gemm_m_type::EMPTY, gemm_v_type::COL_VEC>;
-            if (typebias == gemm_v_type::ROW_VEC) apply_beta_func = gemv_fp32_apply_beta_avx<gemm_m_type::EMPTY, gemm_v_type::ROW_VEC>;
+            if (typebias == gemm_v_type::EMPTY) apply_beta_func = gemv_fp32_apply_beta_fma<gemm_m_type::EMPTY, gemm_v_type::EMPTY>;
+            if (typebias == gemm_v_type::SCALAR) apply_beta_func = gemv_fp32_apply_beta_fma<gemm_m_type::EMPTY, gemm_v_type::SCALAR>;
+            if (typebias == gemm_v_type::COL_VEC) apply_beta_func = gemv_fp32_apply_beta_fma<gemm_m_type::EMPTY, gemm_v_type::COL_VEC>;
+            if (typebias == gemm_v_type::ROW_VEC) apply_beta_func = gemv_fp32_apply_beta_fma<gemm_m_type::EMPTY, gemm_v_type::ROW_VEC>;
         }
         apply_beta_func(bias, sum, N, beta, beta_bias, beta_sum, C);
 
@@ -482,16 +486,16 @@ ppl::common::RetCode gemv_operation_fp32_fma(
         gemm_post_t l_post = gemm_post::NONE;
         if (!k_tail) l_post = post;
 
-        if (k_body) gemv_n_kernel_fp32_fma<MAX_U_K>(lA, lB, N, k_body, ldb, l_post, C);
+        if (k_body) gemv_n_kernel_fp32_fma<MAX_U_K>(lA, lB, N, k_body, ldb, alpha, l_post, C);
 
         lA += k_body;
         lB += k_body * ldb;
 
         l_post = post;
 
-        if (k_tail == 3) gemv_n_kernel_fp32_fma<3>(lA, lB, N, k_tail, ldb, l_post, C);
-        if (k_tail == 2) gemv_n_kernel_fp32_fma<2>(lA, lB, N, k_tail, ldb, l_post, C);
-        if (k_tail == 1) gemv_n_kernel_fp32_fma<1>(lA, lB, N, k_tail, ldb, l_post, C);
+        if (k_tail == 3) gemv_n_kernel_fp32_fma<3>(lA, lB, N, k_tail, ldb, alpha, l_post, C);
+        if (k_tail == 2) gemv_n_kernel_fp32_fma<2>(lA, lB, N, k_tail, ldb, alpha, l_post, C);
+        if (k_tail == 1) gemv_n_kernel_fp32_fma<1>(lA, lB, N, k_tail, ldb, alpha, l_post, C);
     }
 
     return ppl::common::RC_SUCCESS;

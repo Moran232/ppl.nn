@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "ppl/nn/common/tensor_shape.h"
 #include "ppl/nn/models/onnx/graph_parser.h"
 #include "ppl/nn/models/onnx/param_parser_manager.h"
 #include "ppl/nn/models/onnx/utils.h"
@@ -90,8 +91,7 @@ static RetCode ParseGraphInput(const ::onnx::GraphProto& pb_graph, ir::GraphTopo
                 auto dim_value = pb_tensor_shape.dim(j).dim_value();
                 shape.dims.push_back(dim_value);
             } else if (pb_dimension.value_case() == ::onnx::TensorShapeProto_Dimension::kDimParam) {
-                // TODO check dim param values
-                shape.dims.push_back(1);
+                shape.dims.push_back(INVALID_DIM_VALUE);
             } else {
                 LOG(ERROR) << "tensor[" << pb_input.name() << "] dim is not set";
                 return RC_NOT_FOUND;
@@ -166,7 +166,7 @@ static RetCode ParseNodeInfo(const ::onnx::NodeProto& pb_node, const ParamParser
         node->AddOutput(edge->GetId());
     }
 
-    auto parser_info = ParamParserManager::Instance()->Find(pb_node.domain(), pb_node.op_type(), op_set_ref->second);
+    auto parser_info = ParamParserManager::GetInstance()->Find(pb_node.domain(), pb_node.op_type(), op_set_ref->second);
     if (!parser_info) {
         LOG(ERROR) << "unsupported op: domain[" << pb_node.domain() << "], type[" << pb_node.op_type() << "], version["
                    << op_set_ref->second << "]";
@@ -177,7 +177,7 @@ static RetCode ParseNodeInfo(const ::onnx::NodeProto& pb_node, const ParamParser
         return RC_SUCCESS;
     }
 
-    unique_ptr<ir::Attr, void (*)(ir::Attr*)> param(parser_info->create_param(), parser_info->destroy_param);
+    auto param = parser_info->create_param();
     auto status = parser_info->parse_param(pb_node, args, node, param.get());
     if (status != RC_SUCCESS) {
         LOG(ERROR) << "parse attr of node[" << node_name << "] failed: " << GetRetCodeStr(status);

@@ -143,10 +143,13 @@ uint64_t gemm_fp32_get_packed_b_bytes(
     if (isa & ppl::common::ISA_X86_FMA) {
         return gemm_fp32_fma_get_packed_b_bytes(N, K);
     }
+    if (isa & ppl::common::ISA_X86_SSE) {
+        return gemm_fp32_sse_get_packed_b_bytes(N, K);
+    }
     return gemm_fp32_ref_get_packed_b_bytes(N, K);
 }
 
-ppl::common::RetCode gemm_pack_b_fp32(
+ppl::common::RetCode gemm_fp32_pack_b(
     const ppl::common::isa_t isa,
     const float *B,
     const gemm_m_type_t typeB,
@@ -162,6 +165,9 @@ ppl::common::RetCode gemm_pack_b_fp32(
 #endif
     if (isa & ppl::common::ISA_X86_FMA) {
         return gemm_fp32_fma_pack_b(B, typeB, N, K, ldb, packedB);
+    }
+    if (isa & ppl::common::ISA_X86_SSE) {
+        return gemm_fp32_sse_pack_b(B, typeB, N, K, ldb, packedB);
     }
     return gemm_fp32_ref_pack_b(B, typeB, N, K, ldb, packedB);
 }
@@ -202,6 +208,14 @@ ppl::common::RetCode gemm_fp32(
 #endif
     if (isa & ppl::common::ISA_X86_FMA) {
         return gemm_fp32_fma(
+            A, B, bias, sum,
+            typeA, typeB, typebias, typesum,
+            M, N, K, lda, ldb, ldc, ldsum,
+            alpha, beta, beta_bias, beta_sum,
+            post, C);
+    }
+    if (isa & ppl::common::ISA_X86_SSE) {
+        return gemm_fp32_sse(
             A, B, bias, sum,
             typeA, typeB, typebias, typesum,
             M, N, K, lda, ldb, ldc, ldsum,

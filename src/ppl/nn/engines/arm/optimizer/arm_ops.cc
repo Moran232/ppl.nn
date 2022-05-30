@@ -35,6 +35,8 @@ using namespace ppl::common;
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/expand_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/flatten_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/gather_op.h"
+#include "ppl/nn/engines/arm/optimizer/ops/onnx/hard_sigmoid_op.h"
+#include "ppl/nn/engines/arm/optimizer/ops/onnx/hard_swish_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/less_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/log_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/mul_op.h"
@@ -64,12 +66,12 @@ using namespace ppl::common;
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/sqrt_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/squeeze_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/sub_op.h"
+#include "ppl/nn/engines/arm/optimizer/ops/onnx/tanh_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/tile_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/topk_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/transpose_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/unsqueeze_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/onnx/where_op.h"
-#include "ppl/nn/engines/arm/optimizer/ops/pmx/shape_operation_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/pmx/channel_shuffle_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/pmx/reorder_op.h"
 #include "ppl/nn/engines/arm/optimizer/ops/pmx/shape_operation_op.h"
@@ -128,6 +130,9 @@ void RegisterBuiltinOpImpls() {
     RegisterOptKernelCreator<GemmOp>("", "Gemm", 9, 16);
     RegisterOptKernelCreator<AvePoolOp>("", "GlobalAveragePool", 1, 16);
     RegisterOptKernelCreator<MaxPoolOp>("", "GlobalMaxPool", 1, 16);
+    // H
+    RegisterOptKernelCreator<HardSigmoidOp>("", "HardSigmoid", 6, 16);
+    RegisterOptKernelCreator<HardSwishOp>("", "HardSwish", 14, 16);
     // L
     RegisterOptKernelCreator<LeakyReLUOp>("", "LeakyRelu", 6, 16);
     RegisterOptKernelCreator<LessOp>("", "Less", 7, 16);
@@ -160,6 +165,7 @@ void RegisterBuiltinOpImpls() {
     RegisterOptKernelCreator<SqueezeOp>("", "Squeeze", 1, 12);
     RegisterOptKernelCreator<SubOp>("", "Sub", 7, 16);
     // T
+    RegisterOptKernelCreator<TanHOp>("", "Tanh", 6, 16);
     RegisterOptKernelCreator<TileOp>("", "Tile", 6, 16);
     RegisterOptKernelCreator<TopKOp>("", "TopK", 1, 16);
     RegisterOptKernelCreator<TransposeOp>("", "Transpose", 1, 16);

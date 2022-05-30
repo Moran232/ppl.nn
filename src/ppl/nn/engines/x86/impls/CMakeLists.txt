@@ -91,6 +91,11 @@ target_include_directories(pplkernelx86_static
 target_compile_definitions(pplkernelx86_static PRIVATE ${PPLKERNELX86_COMPILE_DEFINITIONS})
 target_compile_options(pplkernelx86_static PRIVATE ${PPLKERNELX86_COMPILE_OPTIONS})
 
+if(CMAKE_COMPILER_IS_GNUCC)
+    # requires a virtual destructor when having virtual functions, though it is not necessary for all cases
+    target_compile_options(pplkernelx86_static PRIVATE -Werror=non-virtual-dtor)
+endif()
+
 if(PPLNN_INSTALL)
     install(TARGETS pplkernelx86_static DESTINATION lib)
     install(FILES ${CMAKE_CURRENT_LIST_DIR}/pplkernelx86-config.cmake DESTINATION lib/cmake/ppl)
@@ -108,15 +113,6 @@ target_compile_definitions(test_conv2d PRIVATE ${PPLKERNELX86_COMPILE_DEFINITION
 target_compile_features(test_conv2d PRIVATE cxx_std_11)
 target_link_libraries(test_conv2d PRIVATE pplkernelx86_static ${PPLKERNELX86_LINK_LIBRARIES})
 
-add_executable(test_fc test/test_fc.cpp ${PPLNN_TOOLS_DIR}/simple_flags.cc)
-target_include_directories(test_fc
-    PUBLIC ${PPLKERNELX86_PUBLIC_INCLUDE_DIRECTORIES} ${PPLKERNELX86_INCLUDE_DIRECTORIES}
-    PRIVATE ${PPLKERNELX86_PRIVATE_INCLUDE_DIRECTORIES} ${PPLNN_TOOLS_DIR} ${PPLNN_FRAMEWORK_INCLUDE_DIRECTORIES})
-target_compile_options(test_fc PRIVATE ${PPLKERNELX86_COMPILE_OPTIONS})
-target_compile_definitions(test_fc PRIVATE ${PPLKERNELX86_COMPILE_DEFINITIONS})
-target_compile_features(test_fc PRIVATE cxx_std_11)
-target_link_libraries(test_fc PRIVATE pplkernelx86_static ${PPLKERNELX86_LINK_LIBRARIES})
-
 add_executable(test_gemm test/test_gemm.cpp ${PPLNN_TOOLS_DIR}/simple_flags.cc)
 target_include_directories(test_gemm
     PUBLIC ${PPLKERNELX86_PUBLIC_INCLUDE_DIRECTORIES} ${PPLKERNELX86_INCLUDE_DIRECTORIES}
@@ -125,15 +121,6 @@ target_compile_options(test_gemm PRIVATE ${PPLKERNELX86_COMPILE_OPTIONS})
 target_compile_definitions(test_gemm PRIVATE ${PPLKERNELX86_COMPILE_DEFINITIONS})
 target_compile_features(test_gemm PRIVATE cxx_std_11)
 target_link_libraries(test_gemm PRIVATE pplkernelx86_static ${PPLKERNELX86_LINK_LIBRARIES})
-
-add_executable(test_gemm_v2 test/test_gemm_v2.cpp ${PPLNN_TOOLS_DIR}/simple_flags.cc)
-target_include_directories(test_gemm_v2
-    PUBLIC ${PPLKERNELX86_PUBLIC_INCLUDE_DIRECTORIES} ${PPLKERNELX86_INCLUDE_DIRECTORIES}
-    PRIVATE ${PPLKERNELX86_PRIVATE_INCLUDE_DIRECTORIES} ${PPLNN_TOOLS_DIR} ${PPLNN_FRAMEWORK_INCLUDE_DIRECTORIES})
-target_compile_options(test_gemm_v2 PRIVATE ${PPLKERNELX86_COMPILE_OPTIONS})
-target_compile_definitions(test_gemm_v2 PRIVATE ${PPLKERNELX86_COMPILE_DEFINITIONS})
-target_compile_features(test_gemm_v2 PRIVATE cxx_std_11)
-target_link_libraries(test_gemm_v2 PRIVATE pplkernelx86_static ${PPLKERNELX86_LINK_LIBRARIES})
 
 add_executable(test_pd_conv2d test/test_pd_conv2d.cpp ${PPLNN_TOOLS_DIR}/simple_flags.cc)
 target_include_directories(test_pd_conv2d
