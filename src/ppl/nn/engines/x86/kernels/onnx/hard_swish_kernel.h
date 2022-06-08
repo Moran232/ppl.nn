@@ -15,21 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "ppl/nn/models/onnx/model_parser.h"
-#include "ppl/common/file_mapping.h"
-#include "gtest/gtest.h"
-#include <string>
-using namespace std;
-using namespace ppl::nn;
-using namespace ppl::common;
+#ifndef _ST_HPC_PPL_NN_ENGINES_X86_KERNELS_ONNX_HARD_SWISH_KERNEL_H_
+#define _ST_HPC_PPL_NN_ENGINES_X86_KERNELS_ONNX_HARD_SWISH_KERNEL_H_
 
-class ModelParserTest : public testing::Test {};
+#include "ppl/nn/engines/x86/kernel.h"
 
-TEST_F(ModelParserTest, TestModelParser) {
-    ir::Graph graph;
-    const string onnx_file = PPLNN_TESTDATA_DIR + string("/conv.onnx");
-    FileMapping fm;
-    EXPECT_EQ(RC_SUCCESS, fm.Init(onnx_file.c_str(), FileMapping::READ));
-    auto res = onnx::ModelParser::Parse(fm.GetData(), fm.GetSize(), nullptr, &graph);
-    EXPECT_EQ(RC_SUCCESS, res);
-}
+namespace ppl { namespace nn { namespace x86 {
+
+class HardSwishKernel : public X86Kernel {
+public:
+    HardSwishKernel(const ir::Node* node) : X86Kernel(node) {}
+
+private:
+    ppl::common::RetCode DoExecute(KernelExecContext*) override;
+};
+
+}}} // namespace ppl::nn::x86
+
+#endif

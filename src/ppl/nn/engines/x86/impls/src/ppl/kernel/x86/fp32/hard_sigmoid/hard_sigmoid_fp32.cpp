@@ -15,21 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "ppl/nn/models/onnx/model_parser.h"
-#include "ppl/common/file_mapping.h"
-#include "gtest/gtest.h"
-#include <string>
-using namespace std;
-using namespace ppl::nn;
-using namespace ppl::common;
+#include "ppl/kernel/x86/common/internal_include.h"
+#include "ppl/kernel/x86/fp32/hard_sigmoid.h"
 
-class ModelParserTest : public testing::Test {};
+namespace ppl { namespace kernel { namespace x86 {
 
-TEST_F(ModelParserTest, TestModelParser) {
-    ir::Graph graph;
-    const string onnx_file = PPLNN_TESTDATA_DIR + string("/conv.onnx");
-    FileMapping fm;
-    EXPECT_EQ(RC_SUCCESS, fm.Init(onnx_file.c_str(), FileMapping::READ));
-    auto res = onnx::ModelParser::Parse(fm.GetData(), fm.GetSize(), nullptr, &graph);
-    EXPECT_EQ(RC_SUCCESS, res);
+ppl::common::RetCode hard_sigmoid_fp32(
+    const ppl::common::isa_t isa,
+    const ppl::nn::TensorShape *src_shape,
+    const float *src,
+    const float alpha,
+    const float beta,
+    float *dst)
+{
+    if (isa & ppl::common::ISA_X86_AVX) {
+        return hard_sigmoid_fp32_avx(src_shape, src, alpha, beta, dst);
+    }
+    return hard_sigmoid_fp32_sse(src_shape, src, alpha, beta, dst);
 }
+
+}}}; // namespace ppl::kernel::x86
