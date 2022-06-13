@@ -145,7 +145,6 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
             continue;
         }
         auto tensor_size = tensor->GetShape()->GetBytesIncludingPadding();
-        total_size += tensor_size;
         auto tensor_dim_count = tensor->GetShape()->GetDimCount();
         std::string tensor_dims = "";
         for (uint32_t j = 0; j < tensor_dim_count; ++j) {
@@ -156,7 +155,31 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
                    << tensor->GetShape()->GetDataFormat();
         LOG(DEBUG) << "input tensor dimcount " << tensor_dim_count;
         LOG(DEBUG) << "input tensor dims " << tensor_dims;
-        total_size += tensor_size; 
+        total_size += tensor_size;
+
+        TensorShape dst_desc = *tensor->GetShape();
+        if (dst_desc.GetDataType() != DATATYPE_FLOAT32 || dst_desc.GetDataFormat() != DATAFORMAT_NDARRAY) {
+          LOG(DEBUG) << "Format or datatype error";
+         }
+        dst_desc.SetDataFormat(DATAFORMAT_NDARRAY);
+        dst_desc.SetDataType(DATATYPE_FLOAT32);
+        auto bytes = dst_desc.GetBytesIncludingPadding();
+        vector<char> buffer(bytes);
+        status = tensor->ConvertToHost(buffer.data(), dst_desc);
+        if (status != RC_SUCCESS) {
+            LOG(ERROR) << "convert data of tensor[" << tensor->GetName() << "] failed: " << GetRetCodeStr(status);
+            return false;
+        }
+        const string out_file_name = "pplnn_input-" + (string)tensor->GetName()  + ".dat";
+        // string out_file_name = tensor->GetName();
+        // out_file_name = "pplnn_output-" + out_file_name + ".dat";
+        ofstream ofs(out_file_name, ios_base::out | ios_base::binary | ios_base::trunc);
+        if (!ofs.is_open()) {
+            LOG(ERROR) << "open output file[" << out_file_name << "]";
+            return false;
+        }
+        ofs.write(buffer.data(), bytes);
+ 
     }
     for (uint32_t i = 0; i < ctx->GetOutputCount(); ++i) {
         auto tensor = ctx->GetOutput<TensorImpl>(i);
