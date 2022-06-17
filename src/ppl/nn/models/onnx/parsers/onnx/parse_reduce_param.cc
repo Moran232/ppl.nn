@@ -20,7 +20,6 @@
 #include "ppl/nn/models/onnx/utils.h"
 using namespace std;
 using namespace ppl::common;
-using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace onnx {
 
@@ -42,9 +41,16 @@ RetCode ParseReduceParam(const ::onnx::NodeProto& pb_node, const ParamParserExtr
         param->type = ReduceParam::ReduceUnknown;
     }
 
-    param->axes = utils::GetNodeAttrsByKey<int32_t>(pb_node, "axes");
-    param->keepdims = utils::GetNodeAttrByKey<int>(pb_node, "keepdims", 1);
+    utils::GetNodeAttr(pb_node, "axes", &param->axes);
+    utils::GetNodeAttr(pb_node, "keepdims", &param->keepdims, 1);
 
+    return RC_SUCCESS;
+}
+
+RetCode PackReduceParam(const ir::Node*, const ir::Attr* arg, ::onnx::NodeProto* pb_node) {
+    auto param = static_cast<const ReduceParam*>(arg);
+    utils::SetNodeAttr(pb_node, "axes", param->axes);
+    utils::SetNodeAttr(pb_node, "keepdims", param->keepdims);
     return RC_SUCCESS;
 }
 

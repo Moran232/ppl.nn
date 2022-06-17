@@ -24,7 +24,8 @@
 #include "cudakernel/nn/conv/conv_fp16.h"
 #include "cudakernel/nn/conv/depthwise.h"
 #include "cudakernel/nn/conv/group_padding.h"
-#include "ppl/nn/params/onnx/clip_param.h"
+
+#include <float.h>
 
 using namespace ppl::common;
 
@@ -33,13 +34,19 @@ namespace ppl { namespace nn { namespace cuda {
 typedef algo_param_t ConvAlgoInfo;
 typedef fuse_info_t ConvFusionInfo;
 
+struct CudaClipParam {
+    float min_value = -FLT_MAX;
+    float max_value = FLT_MAX;
+};
+
 struct ConvExtraParam {
     ConvAlgoInfo algo_info;
     ConvFusionInfo fuse_info;
+    bool is_initializer_weight = false;
+    bool bias_term = false;
 };
 
 struct CudaConvParam final {
-    int32_t bias_term = 0;
     ppl::nn::onnx::ConvParam param;
     ConvExtraParam extra_param;
 };

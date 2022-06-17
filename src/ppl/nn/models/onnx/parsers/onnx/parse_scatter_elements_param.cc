@@ -19,14 +19,19 @@
 #include "ppl/nn/models/onnx/utils.h"
 using namespace std;
 using namespace ppl::common;
-using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace onnx {
 
 RetCode ParseScatterElementsParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraArgs& args, ir::Node*,
                                   ir::Attr* arg) {
     auto param = static_cast<ScatterElementsParam*>(arg);
-    param->axis = utils::GetNodeAttrByKey(pb_node, "axis", 0);
+    utils::GetNodeAttr(pb_node, "axis", &param->axis, 0);
+    return RC_SUCCESS;
+}
+
+RetCode PackScatterElementsParam(const ir::Node*, const ir::Attr* arg, ::onnx::NodeProto* pb_node) {
+    auto param = static_cast<const ScatterElementsParam*>(arg);
+    utils::SetNodeAttr(pb_node, "axis", param->axis);
     return RC_SUCCESS;
 }
 

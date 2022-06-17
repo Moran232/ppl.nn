@@ -20,14 +20,15 @@
 #include "ppl/nn/models/onnx/utils.h"
 using namespace std;
 using namespace ppl::common;
-using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace onnx {
 
 RetCode ParseRoiAlignParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraArgs& args, ir::Node*,
                            ir::Attr* arg) {
     auto param = static_cast<RoiAlignParam*>(arg);
-    const std::string mode = utils::GetNodeAttrByKey<std::string>(pb_node, "mode", "avg");
+
+    string mode;
+    utils::GetNodeAttr(pb_node, "mode", &mode, "avg");
     if (mode == "avg") {
         param->mode = RoiAlignParam::AVG;
     } else if (mode == "max") {
@@ -36,10 +37,30 @@ RetCode ParseRoiAlignParam(const ::onnx::NodeProto& pb_node, const ParamParserEx
         LOG(ERROR) << "Invalid mode " << mode << ".";
         return RC_INVALID_VALUE;
     }
-    param->output_height = utils::GetNodeAttrByKey<uint32_t>(pb_node, "output_height", 1);
-    param->output_width = utils::GetNodeAttrByKey<uint32_t>(pb_node, "output_width", 1);
-    param->sampling_ratio = utils::GetNodeAttrByKey<uint32_t>(pb_node, "sampling_ratio", 0);
-    param->spatial_scale = utils::GetNodeAttrByKey<float>(pb_node, "spatial_scale", 1.0f);
+    utils::GetNodeAttr(pb_node, "output_height", &param->output_height, 1);
+    utils::GetNodeAttr(pb_node, "output_width", &param->output_width, 1);
+    utils::GetNodeAttr(pb_node, "sampling_ratio", &param->sampling_ratio, 0);
+    utils::GetNodeAttr(pb_node, "spatial_scale", &param->spatial_scale, 1.0f);
+    return RC_SUCCESS;
+}
+
+RetCode PackRoiAlignParam(const ir::Node*, const ir::Attr* arg, ::onnx::NodeProto* pb_node) {
+    auto param = static_cast<const RoiAlignParam*>(arg);
+
+    if (param->mode == RoiAlignParam::MAX) {
+        utils::SetNodeAttr(pb_node, "mode", "max");
+    } else if (param->mode == RoiAlignParam::AVG) {
+        utils::SetNodeAttr(pb_node, "mode", "avg");
+    } else {
+        LOG(ERROR) << "invalid mode[" << param->mode << "]";
+        return RC_INVALID_VALUE;
+    }
+
+    utils::SetNodeAttr(pb_node, "output_height", param->output_height);
+    utils::SetNodeAttr(pb_node, "output_width", param->output_width);
+    utils::SetNodeAttr(pb_node, "sampling_ratio", param->sampling_ratio);
+    utils::SetNodeAttr(pb_node, "spatial_scale", param->spatial_scale);
+
     return RC_SUCCESS;
 }
 

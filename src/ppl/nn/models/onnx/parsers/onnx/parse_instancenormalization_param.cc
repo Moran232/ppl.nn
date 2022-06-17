@@ -19,14 +19,19 @@
 #include "ppl/nn/models/onnx/utils.h"
 using namespace std;
 using namespace ppl::common;
-using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace onnx {
 
 RetCode ParseInstanceNormalizationParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraArgs& args, ir::Node*,
                                         ir::Attr* arg) {
     auto param = static_cast<InstanceNormalizationParam*>(arg);
-    param->epsilon = utils::GetNodeAttrByKey<float>(pb_node, "epsilon", 1e-5);
+    utils::GetNodeAttr(pb_node, "epsilon", &param->epsilon, 1e-5);
+    return RC_SUCCESS;
+}
+
+RetCode PackInstanceNormalizationParam(const ir::Node*, const ir::Attr* arg, ::onnx::NodeProto* pb_node) {
+    auto param = static_cast<const InstanceNormalizationParam*>(arg);
+    utils::SetNodeAttr(pb_node, "epsilon", param->epsilon);
     return RC_SUCCESS;
 }
 

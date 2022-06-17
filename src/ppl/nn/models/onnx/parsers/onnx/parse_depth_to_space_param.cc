@@ -20,7 +20,6 @@
 #include "ppl/nn/common/logger.h"
 using namespace std;
 using namespace ppl::common;
-using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace onnx {
 
@@ -28,7 +27,8 @@ RetCode ParseDepthToSpaceParam(const ::onnx::NodeProto& pb_node, const ParamPars
                                ir::Attr* arg) {
     auto param = static_cast<DepthToSpaceParam*>(arg);
 
-    const std::string mode = utils::GetNodeAttrByKey<std::string>(pb_node, "mode", "DCR");
+    string mode;
+    utils::GetNodeAttr(pb_node, "mode", &mode, "DCR");
     if (mode == "DCR") {
         param->mode = DepthToSpaceParam::DCR;
     } else if (mode == "CRD") {
@@ -38,7 +38,24 @@ RetCode ParseDepthToSpaceParam(const ::onnx::NodeProto& pb_node, const ParamPars
         return RC_INVALID_VALUE;
     }
 
-    param->blocksize = utils::GetNodeAttrByKey<int32_t>(pb_node, "blocksize", 0);
+    utils::GetNodeAttr(pb_node, "blocksize", &param->blocksize, 0);
+
+    return RC_SUCCESS;
+}
+
+RetCode PackDepthToSpaceParam(const ir::Node*, const ir::Attr* arg, ::onnx::NodeProto* pb_node) {
+    auto param = static_cast<const DepthToSpaceParam*>(arg);
+
+    if (param->mode == DepthToSpaceParam::DCR) {
+        utils::SetNodeAttr(pb_node, "mode", "DCR");
+    } else if (param->mode == DepthToSpaceParam::CRD) {
+        utils::SetNodeAttr(pb_node, "mode", "CRD");
+    } else {
+        LOG(ERROR) << "invalid DepthToSpace mode `" << param->mode << "`.";
+        return RC_INVALID_VALUE;
+    }
+
+    utils::SetNodeAttr(pb_node, "blocksize", param->blocksize);
 
     return RC_SUCCESS;
 }

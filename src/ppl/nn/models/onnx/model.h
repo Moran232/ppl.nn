@@ -15,22 +15,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef _ST_HPC_PPL_NN_ENGINES_ARM_PARAMS_SLICE_PARAM_H_
-#define _ST_HPC_PPL_NN_ENGINES_ARM_PARAMS_SLICE_PARAM_H_
+#ifndef _ST_HPC_PPL_NN_MODELS_ONNX_MODEL_H_
+#define _ST_HPC_PPL_NN_MODELS_ONNX_MODEL_H_
 
-#include <stdint.h>
-#include <vector>
+#include "ppl/nn/ir/graph.h"
+#include <map>
+#include <string>
 
-namespace ppl { namespace nn { namespace arm {
+namespace ppl { namespace nn { namespace onnx {
 
-struct SliceParam {
-    std::vector<int64_t> starts;
-    std::vector<int64_t> ends;
-    std::vector<int64_t> axes;
-    std::vector<int64_t> steps;
+struct Model final {
+    std::map<std::string, uint64_t> opset;
+    ir::Graph graph;
 };
 
-}}}; // namespace ppl::nn::x86
-
+}}} // namespace ppl::nn::onnx
 
 #endif

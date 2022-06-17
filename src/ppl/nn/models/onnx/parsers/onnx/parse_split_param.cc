@@ -19,14 +19,20 @@
 #include "ppl/nn/models/onnx/utils.h"
 using namespace std;
 using namespace ppl::common;
-using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace onnx {
 
 RetCode ParseSplitParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraArgs& args, ir::Node*, ir::Attr* arg) {
     auto param = static_cast<SplitParam*>(arg);
-    param->axis = utils::GetNodeAttrByKey(pb_node, "axis", 0);
-    param->split_point = utils::GetNodeAttrsByKey<int32_t>(pb_node, "split");
+    utils::GetNodeAttr(pb_node, "axis", &param->axis, 0);
+    utils::GetNodeAttr(pb_node, "split", &param->split_point);
+    return RC_SUCCESS;
+}
+
+RetCode PackSplitParam(const ir::Node*, const ir::Attr* arg, ::onnx::NodeProto* pb_node) {
+    auto param = static_cast<const SplitParam*>(arg);
+    utils::SetNodeAttr(pb_node, "axis", param->axis);
+    utils::SetNodeAttr(pb_node, "split", param->split_point);
     return RC_SUCCESS;
 }
 

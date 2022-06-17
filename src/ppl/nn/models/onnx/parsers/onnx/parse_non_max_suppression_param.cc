@@ -19,14 +19,19 @@
 #include "ppl/nn/models/onnx/utils.h"
 using namespace std;
 using namespace ppl::common;
-using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace onnx {
 
 RetCode ParseNonMaxSuppressionParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraArgs& args, ir::Node*,
                                     ir::Attr* arg) {
     auto param = static_cast<NonMaxSuppressionParam*>(arg);
-    param->center_point_box = utils::GetNodeAttrByKey<int>(pb_node, "center_point_box", 0);
+    utils::GetNodeAttr(pb_node, "center_point_box", &param->center_point_box, 0);
+    return RC_SUCCESS;
+}
+
+RetCode PackNonMaxSuppressionParam(const ir::Node*, const ir::Attr* arg, ::onnx::NodeProto* pb_node) {
+    auto param = static_cast<const NonMaxSuppressionParam*>(arg);
+    utils::SetNodeAttr(pb_node, "center_point_box", param->center_point_box);
     return RC_SUCCESS;
 }
 

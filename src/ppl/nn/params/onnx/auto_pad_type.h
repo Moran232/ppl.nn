@@ -15,21 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "ppl/nn/models/pmx/utils.h"
-#include "ppl/nn/models/pmx/oputils/onnx/slice.h"
-using namespace flatbuffers;
+#ifndef _ST_HPC_PPL_NN_PARAMS_ONNX_AUTO_PAD_TYPE_H_
+#define _ST_HPC_PPL_NN_PARAMS_ONNX_AUTO_PAD_TYPE_H_
 
-namespace ppl { namespace nn { namespace pmx { namespace onnx {
+namespace ppl { namespace nn { namespace onnx {
 
-Offset<SliceParam> SerializeSliceParam(const ppl::nn::onnx::SliceParam& param, FlatBufferBuilder* builder) {
-    return CreateSliceParam(*builder, builder->CreateVector(param.axes), builder->CreateVector(param.ends),
-                            builder->CreateVector(param.starts));
-}
+enum {
+    AUTO_PAD_NOTSET = 0,
+    AUTO_PAD_SAME_UPPER,
+    AUTO_PAD_SAME_LOWER,
+    AUTO_PAD_VALID,
+};
 
-void DeserializeSliceParam(const SliceParam& fb_param, ppl::nn::onnx::SliceParam* param) {
-    utils::Fbvec2Stdvec(fb_param.axes(), &param->axes);
-    utils::Fbvec2Stdvec(fb_param.ends(), &param->ends);
-    utils::Fbvec2Stdvec(fb_param.starts(), &param->starts);
-}
+}}} // namespace ppl::nn::onnx
 
-}}}} // namespace ppl::nn::pmx::onnx
+#endif

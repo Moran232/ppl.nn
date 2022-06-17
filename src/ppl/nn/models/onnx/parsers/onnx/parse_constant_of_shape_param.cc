@@ -20,7 +20,6 @@
 #include "ppl/nn/models/onnx/utils.h"
 using namespace std;
 using namespace ppl::common;
-using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace onnx {
 
@@ -47,6 +46,15 @@ RetCode ParseConstantOfShapeParam(const ::onnx::NodeProto& pb_node, const ParamP
     }
 
     return RC_SUCCESS;
+}
+
+RetCode PackConstantOfShapeParam(const ir::Node*, const ir::Attr* arg, ::onnx::NodeProto* pb_node) {
+    auto param = static_cast<const ConstantOfShapeParam*>(arg);
+    auto pb_attr = pb_node->add_attribute();
+    pb_attr->set_name("value");
+    pb_attr->set_type(::onnx::AttributeProto_AttributeType_TENSOR);
+    return utils::PackTensorProto(param->data.data(), param->data.size(), param->data_type, param->dims,
+                                  pb_attr->mutable_t());
 }
 
 }}} // namespace ppl::nn::onnx

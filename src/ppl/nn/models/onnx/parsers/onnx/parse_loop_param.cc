@@ -21,7 +21,6 @@
 #include "ppl/nn/common/logger.h"
 using namespace std;
 using namespace ppl::common;
-using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace onnx {
 
@@ -48,6 +47,10 @@ RetCode ParseLoopParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraA
     utils::ResolveExtraInputs(param->graph.topo.get(), node, args.topo);
 
     return RC_SUCCESS;
+}
+
+RetCode PackLoopParam(const ir::Node*, const ir::Attr*, ::onnx::NodeProto*) {
+    return RC_UNSUPPORTED;
 }
 
 }}} // namespace ppl::nn::onnx

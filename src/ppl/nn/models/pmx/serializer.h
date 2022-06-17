@@ -15,21 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef _ST_HPC_PPL_NN_ENGINES_X86_PARAMS_SLICE_PARAM_H_
-#define _ST_HPC_PPL_NN_ENGINES_X86_PARAMS_SLICE_PARAM_H_
+#ifndef _ST_HPC_PPL_NN_MODELS_PMX_SERIALIZER_H_
+#define _ST_HPC_PPL_NN_MODELS_PMX_SERIALIZER_H_
 
-#include <stdint.h>
-#include <vector>
+#include "ppl/common/retcode.h"
+#include "ppl/nn/ir/graph_topo.h"
+#include "ppl/nn/engines/engine_impl.h"
+#include "ppl/nn/runtime/runtime_graph_info.h"
 
-namespace ppl { namespace nn { namespace x86 {
+namespace ppl { namespace nn { namespace pmx {
 
-struct SliceParam {
-    std::vector<int64_t> starts;
-    std::vector<int64_t> ends;
-    std::vector<int64_t> axes;
-    std::vector<int64_t> steps;
+class Serializer final {
+public:
+    ppl::common::RetCode Serialize(const std::string& output_file, const ir::GraphTopo*,
+                                   const std::vector<EngineImpl*>&, const RuntimeGraphInfo&);
 };
 
-}}}; // namespace ppl::nn::x86
+}}} // namespace ppl::nn::pmx
 
 #endif

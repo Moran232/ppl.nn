@@ -15,18 +15,46 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "ppl/nn/models/utils.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_clip_param.h"
 #include "ppl/nn/models/onnx/utils.h"
+#include "ppl/nn/common/logger.h"
 using namespace std;
 using namespace ppl::common;
-using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace onnx {
 
-RetCode ParseClipParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraArgs& args, ir::Node*, ir::Attr* arg) {
-    auto param = static_cast<ClipParam*>(arg);
-    param->min_value = utils::GetNodeAttrByKey<float>(pb_node, "min", numeric_limits<float>::lowest());
-    param->max_value = utils::GetNodeAttrByKey<float>(pb_node, "max", numeric_limits<float>::max());
+RetCode ParseClipParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraArgs& args, ir::Node* node,
+                       ir::Attr* arg) {
+    auto& node_type = node->GetType();
+
+    if (node_type.version >= 6 && node_type.version < 11) {
+        auto topo = args.topo;
+        auto data = args.data;
+
+        float min_value, max_value;
+        utils::GetNodeAttr(pb_node, "min", &min_value, numeric_limits<float>::lowest());
+        utils::GetNodeAttr(pb_node, "max", &max_value, numeric_limits<float>::max());
+
+        auto new_edge_name = node->GetName() + "_clip_min_" + std::to_string(topo->GetCurrentEdgeIdBound());
+        auto edge = ppl::nn::utils::AddScalarInitializer(topo, data, new_edge_name, min_value, DATATYPE_FLOAT32);
+        if (!edge) {
+            LOG(ERROR) << "add initializer[" << new_edge_name << "] failed.";
+            return RC_OTHER_ERROR;
+        }
+        node->AddInput(edge->GetId());
+
+        new_edge_name = node->GetName() + "_clip_max_" + std::to_string(topo->GetCurrentEdgeIdBound());
+        edge = ppl::nn::utils::AddScalarInitializer(topo, data, new_edge_name, max_value, DATATYPE_FLOAT32);
+        if (!edge) {
+            LOG(ERROR) << "add initializer[" << new_edge_name << "] failed.";
+            return RC_OTHER_ERROR;
+        }
+        node->AddInput(edge->GetId());
+
+        node_type.version = 11;
+    }
+
     return RC_SUCCESS;
 }
 

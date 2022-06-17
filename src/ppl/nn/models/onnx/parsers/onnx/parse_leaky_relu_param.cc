@@ -19,14 +19,19 @@
 #include "ppl/nn/models/onnx/utils.h"
 using namespace std;
 using namespace ppl::common;
-using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace onnx {
 
 RetCode ParseLeakyReluParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraArgs& args, ir::Node*,
                             ir::Attr* arg) {
     auto param = static_cast<LeakyReluParam*>(arg);
-    param->alpha = utils::GetNodeAttrByKey<float>(pb_node, "alpha", 0.01);
+    utils::GetNodeAttr(pb_node, "alpha", &param->alpha, 0.01);
+    return RC_SUCCESS;
+}
+
+RetCode PackLeakyReluParam(const ir::Node*, const ir::Attr* arg, ::onnx::NodeProto* pb_node) {
+    auto param = static_cast<const LeakyReluParam*>(arg);
+    utils::SetNodeAttr(pb_node, "alpha", param->alpha);
     return RC_SUCCESS;
 }
 
