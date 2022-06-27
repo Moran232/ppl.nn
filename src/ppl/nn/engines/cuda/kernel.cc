@@ -144,7 +144,7 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
         if (!tensor) {
             continue;
         }
-        auto tensor_size = tensor->GetShape()->GetBytesIncludingPadding();
+        auto tensor_size = tensor->GetShape()->CalcBytesIncludingPadding();
         auto tensor_dim_count = tensor->GetShape()->GetDimCount();
         std::string tensor_dims = "";
         for (uint32_t j = 0; j < tensor_dim_count; ++j) {
@@ -155,7 +155,7 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
                    << tensor->GetShape()->GetDataFormat();
         LOG(DEBUG) << "input tensor dimcount " << tensor_dim_count;
         LOG(DEBUG) << "input tensor dims " << tensor_dims;
-        auto tensor_size = tensor->GetShape()->CalcBytesIncludingPadding();
+
         total_size += tensor_size;
  
     }
@@ -199,7 +199,7 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
         if(dst_desc.GetDataType()==DATATYPE_FLOAT16) {
             dst_desc.SetDataType(DATATYPE_FLOAT32);
         }
-        auto bytes = dst_desc.GetBytesIncludingPadding();
+        auto bytes = dst_desc.CalcBytesIncludingPadding();
         vector<char> buffer(bytes);
         status = tensor->ConvertToHost(buffer.data(), dst_desc);
         if (status != RC_SUCCESS) {
