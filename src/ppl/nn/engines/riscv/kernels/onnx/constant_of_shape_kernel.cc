@@ -37,8 +37,8 @@ ppl::common::RetCode ConstantOfShapeKernel::DoExecute(KernelExecContext* ctx) {
     PPL_RISCV_TENSOR_PRINT_DEBUG_MSG(output);
 
     uint64_t output_datatype_size = ppl::common::GetSizeOfDataType(output->GetShape()->GetDataType());
-    return kernel::riscv::memory_init(param_->data.data(), output_datatype_size,
-                                      output->GetShape()->GetElementsIncludingPadding(), output->GetBufferPtr());
+    return kernel::riscv::memory_init(param_->data.GetData(), output_datatype_size,
+                                      output->GetShape()->CalcElementsIncludingPadding(), output->GetBufferPtr());
 }
 
 }}} // namespace ppl::nn::riscv

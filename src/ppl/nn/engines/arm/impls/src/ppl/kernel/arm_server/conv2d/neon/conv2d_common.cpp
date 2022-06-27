@@ -16,6 +16,8 @@
 // under the License.
 
 #include "ppl/kernel/arm_server/conv2d/neon/conv2d.h"
+
+#ifdef PPLNN_USE_AARCH64
 #include "ppl/kernel/arm_server/conv2d/neon/fp16/depthwise/conv2d_n8cx_depthwise_fp16.h"
 #include "ppl/kernel/arm_server/conv2d/neon/fp16/direct/conv2d_n8cx_direct_fp16.h"
 #include "ppl/kernel/arm_server/conv2d/neon/fp16/direct_ndarray/conv2d_direct_ndarray_fp16.h"
@@ -29,6 +31,7 @@
 #include "ppl/kernel/arm_server/conv2d/neon/fp32/im2col/conv2d_n4cx_im2col_fp32.h"
 #include "ppl/kernel/arm_server/conv2d/neon/fp32/winograd/conv2d_wgb2f3_fp32.h"
 #include "ppl/kernel/arm_server/conv2d/neon/fp32/winograd/conv2d_wgb4f3_fp32.h"
+#endif
 
 #include <chrono>
 #include <new>
@@ -46,6 +49,7 @@ conv2d_offline_manager *conv2d_algo_selector::fast_gen_algo(
     const conv2d_param &param,
     ppl::common::Allocator *allocator)
 {
+#ifdef PPLNN_USE_AARCH64
     ppl::common::datatype_t preferred_data_type = options.forward_precision;
     ppl::common::dataformat_t src_format        = shape.GetDataFormat();
 
@@ -292,6 +296,7 @@ conv2d_offline_manager *conv2d_algo_selector::fast_gen_algo(
             delete direct_mgr;
         }
     }
+#endif
 
     return nullptr;
 }
@@ -302,6 +307,7 @@ static conv2d_offline_manager *get_conv2d_offline_manager_with_algo(
     const conv2d_param &param,
     ppl::common::Allocator *allocator)
 {
+#ifdef PPLNN_USE_AARCH64
     switch (algo) {
         case ppl::kernel::arm_server::neon::conv2d_algo::direct:
             if (datatype == ppl::common::DATATYPE_FLOAT32) {
@@ -347,6 +353,7 @@ static conv2d_offline_manager *get_conv2d_offline_manager_with_algo(
 #endif
             break;
     }
+#endif
 
     return nullptr;
 }
@@ -358,6 +365,7 @@ conv2d_offline_manager *conv2d_algo_selector::gen_fast_algo(
     const conv2d_param &param,
     ppl::common::Allocator *allocator)
 {
+#ifdef PPLNN_USE_AARCH64
     ppl::common::datatype_t preferred_data_type = options.forward_precision;
     ppl::common::dataformat_t src_format        = src_shape.GetDataFormat();
 
@@ -367,8 +375,6 @@ conv2d_offline_manager *conv2d_algo_selector::gen_fast_algo(
     const int64_t src_w = src_shape_inferred ? src_shape.GetDim(3) : 224;
     const int64_t dst_h = ((src_h + 2 * param.pad_h - param.dilation_h * (param.kernel_h - 1) - 1) / param.stride_h + 1);
     const int64_t dst_w = ((src_w + 2 * param.pad_w - param.dilation_w * (param.kernel_w - 1) - 1) / param.stride_w + 1);
-    (void)dst_h;
-    (void)dst_w;
 
     static conv2d_algo_info unknown_info = {
         conv2d_algo::unknown,
@@ -497,12 +503,30 @@ conv2d_offline_manager *conv2d_algo_selector::gen_fast_algo(
     algo = ppl::kernel::arm_server::neon::conv2d_algo::tile_gemm;
     candidate_algo_list.push_back(algo);
 
-    const bool tune_blocksize                              = (options.dynamic_tuning_level == ppl::nn::arm::TUNING_SELECT_BLK_SIZE);
-    double best_run_time                                   = std::numeric_limits<double>::max();
+    const bool tune_sp   = true;
+    double best_run_time = std::numeric_limits<double>::max();
+
+    uint32_t elem_size = ppl::common::GetSizeOfDataType(target_algo.data_type);
+    uint32_t num_lanes = 16 / elem_size;
+    const uint32_t pad_channels = ((param.channels   + (num_lanes - 1)) / num_lanes) * num_lanes;
+    const uint32_t pad_num_outs = ((param.num_output + (num_lanes - 1)) / num_lanes) * num_lanes;
+
+    const int64_t num_batch = src_shape.GetDim(0);
+    ppl::nn::TensorShape dst_shape;
+    dst_shape.Reshape({num_batch, pad_num_outs, dst_h, dst_w});
+
+    const size_t src_size  = num_batch * pad_channels * src_h * src_w * elem_size;
+    const size_t dst_size  = num_batch * pad_num_outs * dst_h * dst_w * elem_size;
+    const size_t bias_size = pad_num_outs * elem_size;
+
+    void *src = allocator->Alloc(src_size);
+    void *dst = allocator->Alloc(dst_size);
+    void *bias = allocator->Alloc(bias_size);
+
     ppl::kernel::arm_server::neon::conv2d_algo_t best_algo = ppl::kernel::arm_server::neon::conv2d_algo::unknown;
     conv2d_offline_manager *best_conv2d_mgr                = nullptr;
-    for (auto algo : candidate_algo_list) {
-        conv2d_offline_manager *conv2d_mgr = get_conv2d_offline_manager_with_algo(algo, target_algo.data_type, param, allocator);
+    for (auto candidate_algo : candidate_algo_list) {
+        conv2d_offline_manager *conv2d_mgr = get_conv2d_offline_manager_with_algo(candidate_algo, target_algo.data_type, param, allocator);
         if (conv2d_mgr == nullptr) {
             continue;
         }
@@ -512,9 +536,9 @@ conv2d_offline_manager *conv2d_algo_selector::gen_fast_algo(
         }
 
         double run_time = std::numeric_limits<double>::max();
-        conv2d_mgr->pick_best_schedule_param(src_shape, run_time, tune_blocksize);
+        conv2d_mgr->pick_best_schedule_param(src_shape, src, bias, dst_shape, dst, tune_sp, run_time);
         if (run_time <= best_run_time) {
-            best_algo     = algo;
+            best_algo     = candidate_algo;
             best_run_time = run_time;
 
             if (best_conv2d_mgr) {
@@ -529,8 +553,15 @@ conv2d_offline_manager *conv2d_algo_selector::gen_fast_algo(
         }
     }
 
+    allocator->Free(src);
+    allocator->Free(dst);
+    allocator->Free(bias);
+
     LOG(DEBUG) << "Selected conv2d algorithm: " << best_algo;
     return best_conv2d_mgr;
+#else
+    return nullptr;
+#endif
 }
 
 }}}}; // namespace ppl::kernel::arm_server::neon

@@ -32,7 +32,7 @@ ppl::common::RetCode ArmDataConverter::Convert(BufferDesc* dst, const TensorShap
                << dst_desc.GetDataFormat();
     LOG(DEBUG) << "ARM Data Converter from data type " << src_desc.GetDataType() << " to " << dst_desc.GetDataType();
     if (dst_desc.GetDataFormat() == src_desc.GetDataFormat() && dst_desc.GetDataType() == src_desc.GetDataType()) {
-        return memory_copy(src.addr, src_desc.GetBytesIncludingPadding(), dst->addr);
+        return memory_copy(src.addr, src_desc.CalcBytesIncludingPadding(), dst->addr);
     } else if (dst_desc.GetDataFormat() != src_desc.GetDataFormat() &&
                dst_desc.GetDataType() == src_desc.GetDataType()) {
         if (dst_desc.GetDataType() == DATATYPE_FLOAT32) {
@@ -45,6 +45,7 @@ ppl::common::RetCode ArmDataConverter::Convert(BufferDesc* dst, const TensorShap
                                   src_desc.GetDim(3), (float*)(dst->addr));
                 return RC_SUCCESS;
             }
+#ifdef PPLNN_USE_ARMV8_2_FP16
         } else if (dst_desc.GetDataType() == DATATYPE_FLOAT16) {
             if (dst_desc.GetDataFormat() == DATAFORMAT_N8CX && src_desc.GetDataFormat() == DATAFORMAT_NDARRAY) {
                 NdarrayToN8cxFp16((__fp16*)(src.addr), src_desc.GetDim(0), src_desc.GetDim(1), src_desc.GetDim(2),
@@ -55,7 +56,9 @@ ppl::common::RetCode ArmDataConverter::Convert(BufferDesc* dst, const TensorShap
                                   src_desc.GetDim(3), (__fp16*)(dst->addr));
                 return RC_SUCCESS;
             }
+#endif
         }
+#ifdef PPLNN_USE_ARMV8_2_FP16
     } else if (dst_desc.GetDataFormat() != src_desc.GetDataFormat() &&
                dst_desc.GetDataType() != src_desc.GetDataType()) {
         if (dst_desc.GetDataType() == DATATYPE_FLOAT32 && dst_desc.GetDataFormat() == DATAFORMAT_NDARRAY &&
@@ -72,14 +75,15 @@ ppl::common::RetCode ArmDataConverter::Convert(BufferDesc* dst, const TensorShap
     } else if (dst_desc.GetDataFormat() == src_desc.GetDataFormat() &&
                dst_desc.GetDataType() != src_desc.GetDataType()) {
         if (dst_desc.GetDataType() == DATATYPE_FLOAT32 && src_desc.GetDataType() == DATATYPE_FLOAT16) {
-            Fp16ToFp32((__fp16*)src.addr, src_desc.GetElementsIncludingPadding(), (float*)dst->addr);
+            Fp16ToFp32((__fp16*)src.addr, src_desc.CalcElementsIncludingPadding(), (float*)dst->addr);
             return RC_SUCCESS;
         } else if (dst_desc.GetDataType() == DATATYPE_FLOAT16 && src_desc.GetDataType() == DATATYPE_FLOAT32) {
-            Fp32ToFp16((float*)src.addr, src_desc.GetElementsIncludingPadding(), (__fp16*)dst->addr);
+            Fp32ToFp16((float*)src.addr, src_desc.CalcElementsIncludingPadding(), (__fp16*)dst->addr);
             return RC_SUCCESS;
         } else {
             return ppl::kernel::arm_server::neon::cast(&src_desc, &dst_desc, src.addr, dst->addr);
         }
+#endif
     }
     LOG(ERROR) << "Invalid data type conversion";
     return RC_UNSUPPORTED;

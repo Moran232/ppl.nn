@@ -518,8 +518,8 @@ RetCode OptGraph::DoOptimize(const utils::SharedResource& resource, ArmDevice* d
             auto tensor = it->second.get();
             tensor->SetDevice(device);
             tensor->ReallocBuffer();
-            memcpy(tensor->GetBufferPtr<void>(), graph_->data->constants[edge_id].data.data(),
-                   tensor->GetShape()->GetBytesExcludingPadding());
+            memcpy(tensor->GetBufferPtr<void>(), graph_->data->constants[edge_id].data.GetData(),
+                   tensor->GetShape()->CalcBytesExcludingPadding());
         }
     }
 

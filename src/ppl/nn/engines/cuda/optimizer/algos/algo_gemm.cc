@@ -140,10 +140,10 @@ double GemmAlgorithm::ExcuteTimer(const ir::Node* node, OptKernelOptions& option
     }
 
     RetCode status;
-    ALLOC_BUFFERF_FOR_ALGO_SELECT(input_buffer, shape_in0.GetBytesIncludingPadding(), ALGO_MAX_TIME)
-    ALLOC_BUFFERF_FOR_ALGO_SELECT(weight_buffer, shape_in1.GetBytesIncludingPadding(), ALGO_MAX_TIME)
-    ALLOC_BUFFERF_FOR_ALGO_SELECT(bias_buffer, shape_in2.GetBytesIncludingPadding(), ALGO_MAX_TIME)
-    ALLOC_BUFFERF_FOR_ALGO_SELECT(output_buffer, shape_out.GetBytesIncludingPadding(), ALGO_MAX_TIME)
+    ALLOC_BUFFERF_FOR_ALGO_SELECT(input_buffer, shape_in0.CalcBytesIncludingPadding(), ALGO_MAX_TIME)
+    ALLOC_BUFFERF_FOR_ALGO_SELECT(weight_buffer, shape_in1.CalcBytesIncludingPadding(), ALGO_MAX_TIME)
+    ALLOC_BUFFERF_FOR_ALGO_SELECT(bias_buffer, shape_in2.CalcBytesIncludingPadding(), ALGO_MAX_TIME)
+    ALLOC_BUFFERF_FOR_ALGO_SELECT(output_buffer, shape_out.CalcBytesIncludingPadding(), ALGO_MAX_TIME)
 
     uint64_t size = PPLGemmCUDAGetBufSize(&shape_in0, attr_param_.param.transA);
     ALLOC_BUFFERF_FOR_ALGO_SELECT(temp_buffer, size, ALGO_MAX_TIME)
@@ -309,12 +309,12 @@ RetCode GemmAlgorithm::ModifyParam(ir::Node* node, OptKernelOptions& options) {
 
         if (shape_in0.GetDataType() == ppl::common::DATATYPE_FLOAT16) {
             status = options.opt_stage_device->GetDataConverter()->ConvertFromHost(
-                &weight_constat_info.GetBufferDesc(), postshape, weight_iter->second.data.data(), preshape);
+                &weight_constat_info.GetBufferDesc(), postshape, weight_iter->second.data.GetData(), preshape);
         } else if (shape_in0.GetDataType() == ppl::common::DATATYPE_INT8) {
             auto quants = options.quants;
             status = ((CudaDataConverter*)options.opt_stage_device->GetDataConverter())
                          ->ConvertFromHost(&weight_constat_info.GetBufferDesc(), postshape, (*quants)[postedge_id],
-                                           weight_iter->second.data.data(), preshape, (*quants)[preedge_id]);
+                                           weight_iter->second.data.GetData(), preshape, (*quants)[preedge_id]);
         }
         if (status != RC_SUCCESS) {
             LOG(ERROR) << node->GetName() << " copy constant failed: " << GetRetCodeStr(status);
@@ -372,7 +372,7 @@ RetCode GemmAlgorithm::ModifyParam(ir::Node* node, OptKernelOptions& options) {
         }
 
         auto status = options.reserved_data_device->GetDataConverter()->ConvertFromHost(
-            &bias_constat_info.GetBufferDesc(), postshape, bias_iter->second.data.data(), preshape);
+            &bias_constat_info.GetBufferDesc(), postshape, bias_iter->second.data.GetData(), preshape);
         if (status != RC_SUCCESS) {
             LOG(ERROR) << "copy constant failed: " << GetRetCodeStr(status);
             return status;

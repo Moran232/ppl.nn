@@ -110,10 +110,10 @@ double DepthwiseDirectInt8::ExcuteTimer(const ir::Node* node, OptKernelOptions& 
     }
 
     RetCode status;
-    ALLOC_BUFFERF_FOR_ALGO_SELECT(input_buffer, shape_in0.GetBytesIncludingPadding(), ALGO_MAX_TIME)
-    ALLOC_BUFFERF_FOR_ALGO_SELECT(weight_buffer, shape_in1.GetBytesIncludingPadding(), ALGO_MAX_TIME)
-    ALLOC_BUFFERF_FOR_ALGO_SELECT(bias_buffer, shape_in2.GetBytesIncludingPadding(), ALGO_MAX_TIME)
-    ALLOC_BUFFERF_FOR_ALGO_SELECT(output_buffer, shape_out.GetBytesIncludingPadding(), ALGO_MAX_TIME)
+    ALLOC_BUFFERF_FOR_ALGO_SELECT(input_buffer, shape_in0.CalcBytesIncludingPadding(), ALGO_MAX_TIME)
+    ALLOC_BUFFERF_FOR_ALGO_SELECT(weight_buffer, shape_in1.CalcBytesIncludingPadding(), ALGO_MAX_TIME)
+    ALLOC_BUFFERF_FOR_ALGO_SELECT(bias_buffer, shape_in2.CalcBytesIncludingPadding(), ALGO_MAX_TIME)
+    ALLOC_BUFFERF_FOR_ALGO_SELECT(output_buffer, shape_out.CalcBytesIncludingPadding(), ALGO_MAX_TIME)
     ALLOC_BUFFERF_FOR_ALGO_SELECT(quant_buffer, shape_in1.GetDim(0) * sizeof(float), ALGO_MAX_TIME)
 
     // Do select
@@ -243,7 +243,7 @@ RetCode DepthwiseDirectInt8::ModifyParam(ir::Node* node, OptKernelOptions& optio
         }
         status = ((CudaDataConverter*)options.opt_stage_device->GetDataConverter())
                      ->ConvertFromHost(&temp_buffer, postshape, options.quants->at(postedge_id),
-                                       weight_iter->second.data.data(), preshape, options.quants->at(preedge_id));
+                                       weight_iter->second.data.GetData(), preshape, options.quants->at(preedge_id));
         if (status != RC_SUCCESS) {
             LOG(ERROR) << "copy constant failed: " << GetRetCodeStr(status);
             return status;

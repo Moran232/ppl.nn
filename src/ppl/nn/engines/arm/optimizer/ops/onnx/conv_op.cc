@@ -71,8 +71,8 @@ ppl::common::RetCode ConvOp::SelectAlgorithm(const InputOutputInfo& info, const 
         return ppl::common::RC_SUCCESS;
     }
 
-    float* weight_data = (float*)weight_data_it->second.data.data();
-    int64_t weight_len = weight_data_it->second.data.size() / sizeof(float);
+    float* weight_data = (float*)weight_data_it->second.data.GetData();
+    int64_t weight_len = weight_data_it->second.data.GetSize() / sizeof(float);
 
     float* bias_data = nullptr;
     int64_t bias_len = 0;
@@ -82,8 +82,8 @@ ppl::common::RetCode ConvOp::SelectAlgorithm(const InputOutputInfo& info, const 
             LOG(INFO) << "ConvOp constant weight not found, will use conv runtime.";
             return ppl::common::RC_SUCCESS;
         }
-        bias_data = (float*)bias_data_it->second.data.data();
-        bias_len = bias_data_it->second.data.size() / sizeof(float);
+        bias_data = (float*)bias_data_it->second.data.GetData();
+        bias_len = bias_data_it->second.data.GetSize() / sizeof(float);
     }
 
     const ir::Shape& weight_shape = graph_data->shapes.find(node->GetInput(1))->second;
@@ -159,6 +159,7 @@ ppl::common::RetCode ConvOp::SelectAlgorithm(const InputOutputInfo& info, const 
                         conv2d_param_->fallback_mgr->gen_cvt_weights(weight_data, zero_bias.data());
                 }
             }
+#ifdef PPLNN_USE_ARMV8_2_FP16
         } else if (selected_algo.data_type == ppl::common::DATATYPE_FLOAT16) {
             vector<__fp16> weight_data_fp16;
             weight_data_fp16.resize(weight_len * sizeof(__fp16));
@@ -184,6 +185,7 @@ ppl::common::RetCode ConvOp::SelectAlgorithm(const InputOutputInfo& info, const 
                         conv2d_param_->fallback_mgr->gen_cvt_weights(weight_data_fp16.data(), zero_bias.data());
                 }
             }
+#endif
         } else {
             LOG(ERROR) << "Unsupported data type: " << selected_algo.data_type;
             return ppl::common::RC_UNSUPPORTED;
@@ -224,7 +226,7 @@ bool ConvOp::TryFuseReLU(void) {
         conv2d_param_->mgr->algo_info().algo_type == ppl::kernel::arm_server::neon::conv2d_algo::unknown) {
         return false;
     }
-    ppl::kernel::arm_server::neon::conv2d_param param = conv2d_param_->mgr->param();
+    ppl::kernel::arm_server::neon::conv2d_param param = conv2d_param_->mgr->get_param();
     param.fuse_flag |= ppl::kernel::arm_server::neon::conv_fuse_flag::RELU;
     conv2d_param_->mgr->set_param(param);
     return true;
@@ -235,7 +237,7 @@ bool ConvOp::TryFuseReLU6(void) {
         conv2d_param_->mgr->algo_info().algo_type == ppl::kernel::arm_server::neon::conv2d_algo::unknown) {
         return false;
     }
-    ppl::kernel::arm_server::neon::conv2d_param param = conv2d_param_->mgr->param();
+    ppl::kernel::arm_server::neon::conv2d_param param = conv2d_param_->mgr->get_param();
     param.fuse_flag |= ppl::kernel::arm_server::neon::conv_fuse_flag::RELU;
     param.fuse_flag |= ppl::kernel::arm_server::neon::conv_fuse_flag::RELU6;
     conv2d_param_->mgr->set_param(param);
@@ -247,7 +249,7 @@ bool ConvOp::TryFuseSum(void) {
         conv2d_param_->mgr->algo_info().algo_type == ppl::kernel::arm_server::neon::conv2d_algo::unknown) {
         return false;
     }
-    ppl::kernel::arm_server::neon::conv2d_param param = conv2d_param_->mgr->param();
+    ppl::kernel::arm_server::neon::conv2d_param param = conv2d_param_->mgr->get_param();
     if (param.fuse_flag) { // already fused sum, relu or relu6
         return false;
     }

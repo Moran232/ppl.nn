@@ -169,7 +169,7 @@ RetCode OptGraph::UpdateDims(const utils::SharedResource& resource) {
                         return status;
                     }
 
-                    status = tensor->CopyFromHost(constant_ref->second.data.data());
+                    status = tensor->CopyFromHost(constant_ref->second.data.GetData());
                     if (status != RC_SUCCESS) {
                         LOG(ERROR) << "copy constant [" << tensor->GetName() << "] failed: " << GetRetCodeStr(status);
                         return status;
@@ -524,14 +524,14 @@ RetCode OptGraph::LoadConstants(CudaDevice* device) {
             constant_info.Reshape(postshape);
 
             auto status = constant_info.ReallocBuffer();
-            if (status != RC_SUCCESS && postshape.GetBytesIncludingPadding() > 0) {
+            if (status != RC_SUCCESS && postshape.CalcBytesIncludingPadding() > 0) {
                 LOG(ERROR) << "alloc buffer for constant failed: " << GetRetCodeStr(status);
                 return status;
             }
 
             auto converter = (CudaDataConverter*)device->GetDataConverter();
             status = converter->ConvertFromHost(&constant_info.GetBufferDesc(), postshape, graph_quants[postedge_id],
-                                                constant_ref->second.data.data(), preshape, graph_quants[preedge_id]);
+                                                constant_ref->second.data.GetData(), preshape, graph_quants[preedge_id]);
             if (status != RC_SUCCESS) {
                 LOG(ERROR) << "copy constant failed: " << GetRetCodeStr(status);
                 return status;

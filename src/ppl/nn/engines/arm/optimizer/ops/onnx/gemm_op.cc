@@ -59,10 +59,10 @@ ppl::common::RetCode GemmOp::SelectAlgorithm(const InputOutputInfo& info, const 
     auto graph_data = options.graph_data;
 
     auto weight_data_it = graph_data->constants.find(node->GetInput(1));
-    int64_t weight_len = weight_data_it->second.data.size() / sizeof(float);
+    int64_t weight_len = weight_data_it->second.data.GetSize() / sizeof(float);
     void* weight_data = nullptr;
     if (weight_data_it != graph_data->constants.end()) {
-        weight_data = (void*)weight_data_it->second.data.data();
+        weight_data = weight_data_it->second.data.GetData();
     }
 
     void* bias_data = nullptr;
@@ -70,8 +70,8 @@ ppl::common::RetCode GemmOp::SelectAlgorithm(const InputOutputInfo& info, const 
     if (node->GetInputCount() == 3) {
         auto bias_data_it = graph_data->constants.find(node->GetInput(2));
         if (bias_data_it != graph_data->constants.end()) {
-            bias_len = bias_data_it->second.data.size() / sizeof(float);
-            bias_data = (void*)bias_data_it->second.data.data();
+            bias_len = bias_data_it->second.data.GetSize() / sizeof(float);
+            bias_data = bias_data_it->second.data.GetData();
         }
     }
 
@@ -103,6 +103,7 @@ ppl::common::RetCode GemmOp::SelectAlgorithm(const InputOutputInfo& info, const 
             if (bias_data != nullptr) {
                 if (dtype == ppl::common::DATATYPE_FLOAT32) {
                     fc_param_->mgr->gen_cvt_weights(weight_data, bias_data, dtype);
+#ifdef PPLNN_USE_ARMV8_2_FP16
                 } else if (dtype == ppl::common::DATATYPE_FLOAT16) {
                     vector<__fp16> weight_data_fp16;
                     weight_data_fp16.resize(weight_len * sizeof(__fp16));
@@ -113,11 +114,13 @@ ppl::common::RetCode GemmOp::SelectAlgorithm(const InputOutputInfo& info, const 
                     Fp32ToFp16((const float*)bias_data, bias_len, bias_data_fp16.data());
 
                     fc_param_->mgr->gen_cvt_weights(weight_data_fp16.data(), bias_data_fp16.data(), dtype);
+#endif
                 }
             } else {
                 if (dtype == ppl::common::DATATYPE_FLOAT32) {
                     std::vector<float> zero_bias(fc_param_->param.num_output, 0.0f);
                     fc_param_->mgr->gen_cvt_weights(weight_data, zero_bias.data(), dtype);
+#ifdef PPLNN_USE_ARMV8_2_FP16
                 } else if (dtype == ppl::common::DATATYPE_FLOAT16) {
                     vector<__fp16> weight_data_fp16;
                     weight_data_fp16.resize(weight_len * sizeof(__fp16));
@@ -125,6 +128,7 @@ ppl::common::RetCode GemmOp::SelectAlgorithm(const InputOutputInfo& info, const 
 
                     std::vector<__fp16> zero_bias(fc_param_->param.num_output, 0.0f);
                     fc_param_->mgr->gen_cvt_weights(weight_data_fp16.data(), zero_bias.data(), dtype);
+#endif
                 }
             }
         }
