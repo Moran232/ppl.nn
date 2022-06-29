@@ -46,6 +46,11 @@ ppl::common::RetCode SoftmaxKernel::DoExecute(KernelExecContext* ctx) {
     auto input_quant = GetCommonParam()->cuda_tensor_info->at(input->GetEdge()->GetId());
     auto output_quant = GetCommonParam()->cuda_tensor_info->at(output->GetEdge()->GetId());
 
+    //TODO: add softmax opset > 12
+    auto version =  GetNode()->GetType().version;
+    if (version > 12){
+        LOG(DEBUG) << "TOOD: add softmax opset >12" ;
+    }
     status = PPLCUDASoftmaxForwardImp(GetStream(), input->GetShape(), input->GetBufferPtr(), output->GetShape(),
                                       output->GetBufferPtr(), tmp_buffer, param_->axis);
     return status;
