@@ -15,21 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef _ST_HPC_PPL_NN_LUA_LUA_TYPE_CREATOR_H_
-#define _ST_HPC_PPL_NN_LUA_LUA_TYPE_CREATOR_H_
+#ifndef _ST_HPC_PPL_NN_ENGINES_X86_OPTIMIZER_OPS_ONNX_SIGN_OP_H_
+#define _ST_HPC_PPL_NN_ENGINES_X86_OPTIMIZER_OPS_ONNX_SIGN_OP_H_
 
-#include "ppl/common/retcode.h"
-#include "luacpp/luacpp.h"
+#include "ppl/nn/engines/x86/optimizer/opt_kernel.h"
 
-namespace ppl { namespace nn { namespace lua {
+namespace ppl { namespace nn { namespace x86 {
 
-class LuaTypeCreator {
+class SignOp final : public X86OptKernel {
 public:
-    virtual ~LuaTypeCreator() {}
-    virtual ppl::common::RetCode Register(const std::shared_ptr<luacpp::LuaState>& lstate,
-                                          const std::shared_ptr<luacpp::LuaTable>& lmodule) = 0;
+    SignOp(const ir::Node* node) : X86OptKernel(node) {}
+    ppl::common::RetCode Init(const OptKernelOptions& options) override;
+    KernelImpl* CreateKernelImpl() const override;
+    ppl::common::RetCode SelectFormat(const InputOutputInfo& info,
+                                      std::vector<ppl::common::dataformat_t>* selected_input_formats,
+                                      std::vector<ppl::common::dataformat_t>* selected_output_formats) override;
 };
 
-}}}
+}}} // namespace ppl::nn::x86
 
 #endif

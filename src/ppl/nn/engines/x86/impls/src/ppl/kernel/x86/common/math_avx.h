@@ -15,41 +15,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef _ST_HPC_PPL_NN_LUA_LUA_TYPE_CREATOR_MANAGER_H_
-#define _ST_HPC_PPL_NN_LUA_LUA_TYPE_CREATOR_MANAGER_H_
+#ifndef __ST_PPL_KERNEL_X86_COMMON_MATH_AVX_H_
+#define __ST_PPL_KERNEL_X86_COMMON_MATH_AVX_H_
 
-#include "lua_type_creator.h"
-#include <vector>
-#include <memory>
+#include <immintrin.h>
 
-namespace ppl { namespace nn { namespace lua {
+namespace ppl { namespace kernel { namespace x86 {
 
-class LuaTypeCreatorManager final {
-public:
-    static LuaTypeCreatorManager* Instance() {
-        static LuaTypeCreatorManager mgr;
-        return &mgr;
-    }
+static inline __m256 _avx_sign_ps(__m256 value) {
+    const __m256 zero = _mm256_setzero_ps();
+    __m256 positives = _mm256_and_ps(_mm256_cmp_ps(value, zero, _CMP_GT_OQ), _mm256_set1_ps(1.0f));
+    __m256 negatives = _mm256_and_ps(_mm256_cmp_ps(value, zero, _CMP_LT_OQ), _mm256_set1_ps(-1.0f));
+    return _mm256_or_ps(positives, negatives);
+}
 
-    void AddCreator(const std::shared_ptr<LuaTypeCreator>& creator) {
-        creator_list_.push_back(creator);
-    }
-
-    uint32_t GetCreatorCount() const {
-        return creator_list_.size();
-    }
-
-    LuaTypeCreator* GetCreator(uint32_t idx) const {
-        return creator_list_[idx].get();
-    }
-
-private:
-    std::vector<std::shared_ptr<LuaTypeCreator>> creator_list_;
-
-private:
-    LuaTypeCreatorManager() {}
-};
-
-}}}
+}}}; // namespace ppl::kernel::x86
 
 #endif

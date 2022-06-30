@@ -15,20 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef _ST_HPC_PPL_NN_PYTHON_PY_TYPE_CREATOR_H_
-#define _ST_HPC_PPL_NN_PYTHON_PY_TYPE_CREATOR_H_
+#include "luacpp/luacpp.h"
+using namespace luacpp;
 
-#include "ppl/common/retcode.h"
-#include "pybind11/pybind11.h"
+#include <map>
+#include <string>
+#include <memory>
+using namespace std;
 
-namespace ppl { namespace nn { namespace python {
+namespace ppl { namespace nn { namespace lua {
 
-class PyTypeCreator {
-public:
-    virtual ~PyTypeCreator() {}
-    virtual ppl::common::RetCode Register(pybind11::module*) = 0;
-};
+void LoadResources(const shared_ptr<LuaState>&, const map<string, shared_ptr<LuaTable>>&) {}
 
-}}}
-
-#endif
+}}} // namespace ppl::nn::lua
