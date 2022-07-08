@@ -15,31 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef _ST_HPC_PPL_NN_UTILS_DESTRUCTOR_H_
-#define _ST_HPC_PPL_NN_UTILS_DESTRUCTOR_H_
+#ifndef _ST_HPC_PPL_NN_UTILS_VERSION_H_
+#define _ST_HPC_PPL_NN_UTILS_VERSION_H_
 
-#include <functional>
-
-namespace ppl { namespace nn { namespace utils {
-
-class Destructor final {
-public:
-    Destructor(const std::function<void()>& f) : f_(f) {}
-    Destructor(std::function<void()>&& f) : f_(std::move(f)) {}
-    Destructor(Destructor&&) = default;
-    Destructor& operator=(Destructor&&) = default;
-    ~Destructor() {
-        f_();
-    }
-
-private:
-    std::function<void()> f_;
-
-private:
-    Destructor(const Destructor&) = delete;
-    Destructor& operator=(const Destructor&) = delete;
-};
-
-}}} // namespace ppl::nn::utils
+#define PPLNN_VERSION_MAJOR @PPLNN_VERSION_MAJOR@
+#define PPLNN_VERSION_MINOR @PPLNN_VERSION_MINOR@
+#define PPLNN_VERSION_PATCH @PPLNN_VERSION_PATCH@
+#define PPLNN_COMMIT_STR "@PPLNN_COMMIT_STR@"
 
 #endif

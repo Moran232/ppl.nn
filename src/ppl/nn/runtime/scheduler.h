@@ -28,6 +28,7 @@ class Scheduler {
 public:
     virtual ~Scheduler() {}
     virtual ppl::common::RetCode Init(const ir::GraphTopo*, const RuntimeAuxInfo*, RuntimeGraphResource*) = 0;
+    virtual ppl::common::RetCode InferShapes() = 0;
     virtual ppl::common::RetCode Run(Profiler*) = 0;
 };
 

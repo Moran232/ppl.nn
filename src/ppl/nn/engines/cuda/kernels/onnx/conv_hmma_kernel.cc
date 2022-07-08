@@ -17,7 +17,7 @@
 
 #include "ppl/nn/engines/cuda/kernels/onnx/conv_hmma_kernel.h"
 #include "ppl/common/cuda/cuda_types.h"
-#include "ppl/nn/utils/destructor.h"
+#include "ppl/common/destructor.h"
 #include <cuda_fp16.h>
 
 namespace ppl { namespace nn { namespace cuda {
@@ -89,7 +89,7 @@ ppl::common::RetCode ConvHmmaKernel::DoExecute(KernelExecContext* ctx) {
                    << "] failed: " << ppl::common::GetRetCodeStr(status);
         return status;
     }
-    utils::Destructor __tmp_buffer_guard([this, &tmp_buffer_desc]() -> void {
+    ppl::common::Destructor __tmp_buffer_guard([this, &tmp_buffer_desc]() -> void {
         GetCudaDevice()->FreeTmpBuffer(&tmp_buffer_desc);
     });
     auto tmp_buffer = tmp_buffer_desc.addr;
@@ -99,14 +99,14 @@ ppl::common::RetCode ConvHmmaKernel::DoExecute(KernelExecContext* ctx) {
     PPLCUDAConvolutionForwardJitImp(
         stream, module->GetKernelFunc(), shape_in0.GetDataType(), (int4*)ctx->GetInput<TensorImpl>(0)->GetBufferPtr(),
         (int4*)ctx->GetInput<TensorImpl>(1)->GetBufferPtr(), (int4*)ctx->GetOutput<TensorImpl>(0)->GetBufferPtr(),
-        param_->extra_param.bias_term ? (int4*)ctx->GetInput<TensorImpl>(2)->GetBufferPtr() : nullptr, (int4*)tmp_buffer,
-        algo_param, temp_conv_param, temp_fuse_param);
+        param_->extra_param.bias_term ? (int4*)ctx->GetInput<TensorImpl>(2)->GetBufferPtr() : nullptr,
+        (int4*)tmp_buffer, algo_param, temp_conv_param, temp_fuse_param);
 #else
     PPLCUDAConvolutionForwardImp(
         stream, shape_in0.GetDataType(), (int4*)ctx->GetInput<TensorImpl>(0)->GetBufferPtr(),
         (int4*)ctx->GetInput<TensorImpl>(1)->GetBufferPtr(), (int4*)ctx->GetOutput<TensorImpl>(0)->GetBufferPtr(),
-        param_->extra_param.bias_term ? (int4*)ctx->GetInput<TensorImpl>(2)->GetBufferPtr() : nullptr, (int4*)tmp_buffer,
-        algo_param, temp_conv_param, temp_fuse_param);
+        param_->extra_param.bias_term ? (int4*)ctx->GetInput<TensorImpl>(2)->GetBufferPtr() : nullptr,
+        (int4*)tmp_buffer, algo_param, temp_conv_param, temp_fuse_param);
 #endif
     LOG(DEBUG) << "Excute HMMA conv with kernel id:" << param_->extra_param.algo_info.kid
                << " and temp buffer size: " << size;

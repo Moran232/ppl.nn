@@ -20,7 +20,7 @@
 #include <memory>
 
 #include "cudakernel/memory/pad.h"
-#include "ppl/nn/utils/destructor.h"
+#include "ppl/common/destructor.h"
 
 namespace ppl { namespace nn { namespace cuda {
 
@@ -28,7 +28,7 @@ ppl::common::RetCode PadKernel::DoExecute(KernelExecContext* ctx) {
     auto input = ctx->GetInput<TensorImpl>(0);
     auto output = ctx->GetOutput<TensorImpl>(0);
     PadKernelParam kernel_param;
-    
+
     void* pad_buffer = ctx->GetInput<TensorImpl>(1)->GetBufferPtr();
     // keep pads data on host for optimization
     uint32_t num_elems = ctx->GetInput<TensorImpl>(1)->GetShape()->CalcElementsIncludingPadding();

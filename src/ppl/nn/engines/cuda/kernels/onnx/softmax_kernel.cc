@@ -16,9 +16,8 @@
 // under the License.
 
 #include "ppl/nn/engines/cuda/kernels/onnx/softmax_kernel.h"
-#include "ppl/nn/utils/destructor.h"
+#include "ppl/common/destructor.h"
 #include "cudakernel/nn/softmax.h"
-#include<iostream>
 
 namespace ppl { namespace nn { namespace cuda {
 
@@ -33,20 +32,19 @@ ppl::common::RetCode SoftmaxKernel::DoExecute(KernelExecContext* ctx) {
     auto input_shape = input->GetShape();
     auto input_quant = GetCommonParam()->cuda_tensor_info->at(input->GetEdge()->GetId());
     auto output_quant = GetCommonParam()->cuda_tensor_info->at(output->GetEdge()->GetId());
-
-    if(input_shape->GetDimCount() == 4 && input_shape->GetDim(2) == input_shape->GetDim(3)) {
-        return  PPLCUDAFastSoftmax(GetStream(), input->GetShape(), input->GetBufferPtr(), output->GetShape(),
-                                      output->GetBufferPtr(), nullptr, 1);
+    if (input_shape->GetDimCount() == 4 && input_shape->GetDim(2) == input_shape->GetDim(3)) {
+        return PPLCUDAFastSoftmax(GetStream(), input->GetShape(), input->GetBufferPtr(), output->GetShape(),
+                                  output->GetBufferPtr(), nullptr, 1);
     } else {
         BufferDesc tmp_buffer_desc;
         auto tmp_buffer_bytes = CalcTmpBufferSize(*ctx);
         auto status = GetCudaDevice()->AllocTmpBuffer(tmp_buffer_bytes, &tmp_buffer_desc);
         if (status != ppl::common::RC_SUCCESS) {
             LOG(ERROR) << "alloc tmp buffer size[" << tmp_buffer_bytes << "] for kernel[" << GetName()
-                    << "] failed: " << ppl::common::GetRetCodeStr(status);
+                       << "] failed: " << ppl::common::GetRetCodeStr(status);
             return status;
         }
-        utils::Destructor __tmp_buffer_guard([this, &tmp_buffer_desc]() -> void {
+        ppl::common::Destructor __tmp_buffer_guard([this, &tmp_buffer_desc]() -> void {
             GetCudaDevice()->FreeTmpBuffer(&tmp_buffer_desc);
         });
         auto tmp_buffer = tmp_buffer_desc.addr;
@@ -58,7 +56,7 @@ ppl::common::RetCode SoftmaxKernel::DoExecute(KernelExecContext* ctx) {
         }   
 
         status = PPLCUDASoftmaxForwardImp(GetStream(), input->GetShape(), input->GetBufferPtr(), output->GetShape(),
-                                        output->GetBufferPtr(), tmp_buffer, param_->axis);
+                                          output->GetBufferPtr(), tmp_buffer, param_->axis);
         return status;
     }
     return ppl::common::RC_SUCCESS;

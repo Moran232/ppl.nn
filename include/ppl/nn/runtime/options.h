@@ -15,19 +15,28 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "ppl/nn/utils/destructor.h"
-#include "gtest/gtest.h"
-using namespace ppl::nn;
+#ifndef _ST_HPC_PPL_NN_RUNTIME_OPTIONS_H_
+#define _ST_HPC_PPL_NN_RUNTIME_OPTIONS_H_
 
-TEST(DestructorTest, misc) {
-    const int original_value = 10;
-    const int expected_value = 20;
-    int a = original_value;
-    {
-        utils::Destructor __a__([&a, &expected_value]() -> void {
-            a = expected_value;
-        });
-    }
-    EXPECT_EQ(expected_value, a);
-    EXPECT_NE(original_value, a);
-}
+namespace ppl { namespace nn {
+
+/** options for Runtime::Configure() */
+enum {
+    /**
+       @brief args: true/false.
+       @note this option may cause performance loss
+    */
+    RUNTIME_CONF_SET_KERNEL_PROFILING_FLAG = 0,
+
+    /**
+       @brief infer shapes before running
+       @note input shapes MUST be set first
+    */
+    RUNTIME_CONF_INFER_SHAPES,
+
+    RUNTIME_CONF_MAX,
+};
+
+}} // namespace ppl::nn
+
+#endif

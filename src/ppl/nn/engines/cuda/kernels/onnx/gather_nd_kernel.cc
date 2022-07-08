@@ -16,7 +16,7 @@
 // under the License.
 
 #include "ppl/nn/engines/cuda/kernels/onnx/gather_nd_kernel.h"
-#include "ppl/nn/utils/destructor.h"
+#include "ppl/common/destructor.h"
 #include "cudakernel/memory/gather_nd.h"
 
 namespace ppl { namespace nn { namespace cuda {
@@ -37,7 +37,7 @@ ppl::common::RetCode GatherNdKernel::DoExecute(KernelExecContext* ctx) {
                    << "] failed: " << ppl::common::GetRetCodeStr(status);
         return status;
     }
-    utils::Destructor __tmp_buffer_guard([this, &tmp_buffer_desc]() -> void {
+    ppl::common::Destructor __tmp_buffer_guard([this, &tmp_buffer_desc]() -> void {
         GetCudaDevice()->FreeTmpBuffer(&tmp_buffer_desc);
     });
     auto tmp_buffer = tmp_buffer_desc.addr;
@@ -46,9 +46,8 @@ ppl::common::RetCode GatherNdKernel::DoExecute(KernelExecContext* ctx) {
     auto indices = ctx->GetInput<TensorImpl>(1);
     auto output = ctx->GetOutput<TensorImpl>(0);
 
-    status =
-        PPLCUDAGatherNDForwardImp(GetStream(), input->GetShape(), input->GetBufferPtr(), indices->GetShape(),
-                                  indices->GetBufferPtr(), output->GetShape(), output->GetBufferPtr(), tmp_buffer);
+    status = PPLCUDAGatherNDForwardImp(GetStream(), input->GetShape(), input->GetBufferPtr(), indices->GetShape(),
+                                       indices->GetBufferPtr(), output->GetShape(), output->GetBufferPtr(), tmp_buffer);
     return status;
 }
 
