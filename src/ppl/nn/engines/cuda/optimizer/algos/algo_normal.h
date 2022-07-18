@@ -38,6 +38,7 @@ public:
         arbitrary_formats_.emplace(DATAFORMAT_NDARRAY, ndarray);
         arbitrary_formats_.emplace(DATAFORMAT_NHWC8, ndarray);
         arbitrary_formats_.emplace(DATAFORMAT_NHWC16, ndarray);
+        nhwc8_formats_.emplace(DATAFORMAT_NHWC8, nhwc8);
     }
 
     void GetAttrParam(void*& param) const override {
@@ -53,6 +54,10 @@ public:
         if (arbitrary_set_.find(type_name) != arbitrary_set_.end()) {
             return arbitrary_formats_;
         }
+        if (nhwc8_set_.find(type_name) != nhwc8_set_.end()) {
+            return nhwc8_formats_;
+        }
+
         return ndarray_formats_;
     }
 
@@ -68,8 +73,9 @@ private:
     std::map<dataformat_t, std::set<dataformat_t>> nhwc8_formats_;
     std::map<dataformat_t, std::set<dataformat_t>> inherited_formats_;
     std::map<dataformat_t, std::set<dataformat_t>> arbitrary_formats_;
-    std::set<std::string> inherited_set_{"Add",
-                                         "Mul",
+    std::set<std::string> inherited_set_{
+                                        // "Add",
+                                        //  "Mul",
                                          "Div",
                                          "Sub",
                                          "Relu",
@@ -88,6 +94,8 @@ private:
                                          "Sigmoid",
                                          "ChannelShuffle"};
     std::set<std::string> arbitrary_set_{"Shape"};
+    std::set<std::string> nhwc8_set_{"Mul", "Add"};
+
 };
 
 }}} // namespace ppl::nn::cuda
