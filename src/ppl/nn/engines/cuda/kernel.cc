@@ -138,17 +138,35 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
         if (!tensor) {
             continue;
         }
+        TensorShape dst_desc = *tensor->GetShape();
+        dst_desc.SetDataFormat(DATAFORMAT_NDARRAY);
+        dst_desc.SetDataType(DATATYPE_FLOAT32);
+        auto bytes = dst_desc.CalcBytesIncludingPadding();
+        vector<char> buffer(bytes);
+        status = tensor->ConvertToHost(buffer.data(), dst_desc);
+        if (status != RC_SUCCESS) {
+            LOG(ERROR) << "convert data of tensor[" << tensor->GetName() << "] failed: " << GetRetCodeStr(status);
+            return false;
+        }
+        const string out_file_name = "pplnn_input-" + (string)tensor->GetName()  + ".dat";
+        ofstream ofs(out_file_name, ios_base::out | ios_base::binary | ios_base::trunc);
+        if (!ofs.is_open()) {
+            LOG(ERROR) << "open output file[" << out_file_name << "]";
+            return false;
+        }
+        ofs.write(buffer.data(), bytes);
+
         auto tensor_size = tensor->GetShape()->CalcBytesIncludingPadding();
         auto tensor_dim_count = tensor->GetShape()->GetDimCount();
         std::string tensor_dims = "";
         for (uint32_t j = 0; j < tensor_dim_count; ++j) {
             tensor_dims += std::to_string(tensor->GetShape()->GetDim(j)) + " ";
         }
-        LOG(DEBUG) << "input tensor size " << tensor_size;
-        LOG(DEBUG) << "input tensor datatype " << tensor->GetShape()->GetDataType() << " tensor dataformat "
-                   << tensor->GetShape()->GetDataFormat();
+        LOG(DEBUG) << "input tensor [" << i << "] " << tensor->GetName();
         LOG(DEBUG) << "input tensor dimcount " << tensor_dim_count;
-        LOG(DEBUG) << "input tensor dims " << tensor_dims;
+        LOG(DEBUG) << "input dims " << tensor_dims;
+        LOG(DEBUG) << "input datatype " << tensor->GetShape()->GetDataType() << " dataformat " << tensor->GetShape()->GetDataFormat();
+        LOG(DEBUG) << "input tensor size " << tensor_size;
 
         total_size += tensor_size;
  
@@ -161,11 +179,11 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
         for (uint32_t j = 0; j < tensor_dim_count; ++j) {
             tensor_dims += std::to_string(tensor->GetShape()->GetDim(j)) + " ";
         }
+        LOG(DEBUG) << "output tensor [" << i << "] " << tensor->GetName();
+        LOG(DEBUG) << "output dimcount " << tensor_dim_count;
+        LOG(DEBUG) << "output dims " << tensor_dims;
+        LOG(DEBUG) << "output datatype " << tensor->GetShape()->GetDataType() << " dataformat " << tensor->GetShape()->GetDataFormat();
         LOG(DEBUG) << "output tensor size " << tensor_size;
-        LOG(DEBUG) << "output tensor datatype " << tensor->GetShape()->GetDataType() << " tensor dataformat "
-                   << tensor->GetShape()->GetDataFormat();
-        LOG(DEBUG) << "output tensor dimcount " << tensor_dim_count;
-        LOG(DEBUG) << "output tensor dims " << tensor_dims;
         total_size += tensor_size;
     }
     auto run_begin_ts = std::chrono::system_clock::now();
@@ -189,9 +207,7 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
         auto tensor = ctx->GetOutput<TensorImpl>(i);
         TensorShape dst_desc = *tensor->GetShape();
         dst_desc.SetDataFormat(DATAFORMAT_NDARRAY);
-        if(dst_desc.GetDataType()==DATATYPE_FLOAT16) {
-            dst_desc.SetDataType(DATATYPE_FLOAT32);
-        }
+        dst_desc.SetDataType(DATATYPE_FLOAT32);
         auto bytes = dst_desc.CalcBytesIncludingPadding();
         vector<char> buffer(bytes);
         status = tensor->ConvertToHost(buffer.data(), dst_desc);
@@ -200,8 +216,6 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
             return false;
         }
         const string out_file_name = "pplnn_output-" + (string)tensor->GetName()  + ".dat";
-        // string out_file_name = tensor->GetName();
-        // out_file_name = "pplnn_output-" + out_file_name + ".dat";
         ofstream ofs(out_file_name, ios_base::out | ios_base::binary | ios_base::trunc);
         if (!ofs.is_open()) {
             LOG(ERROR) << "open output file[" << out_file_name << "]";
