@@ -141,6 +141,7 @@ ppl::common::RetCode ConvImmaKernel::DoExecute(KernelExecContext* ctx) {
         algo_param, temp_conv_param, temp_quant_param, temp_fuse_param);
 #endif
     LOG(DEBUG) << "Excute IMMA conv with kernel id:" << param_->extra_param.algo_info.kid
+               << " kernel name: " << param_->extra_param.algo_info.algo_name
                << " and temp buffer size: " << size;
 
     return ppl::common::RC_SUCCESS;
