@@ -190,7 +190,7 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
         auto tensor = ctx->GetOutput<TensorImpl>(i);
         TensorShape dst_desc = *tensor->GetShape();
         dst_desc.SetDataFormat(DATAFORMAT_NDARRAY);
-        dst_desc.SetDataType(DATATYPE_FLOAT32);
+        //dst_desc.SetDataType(DATATYPE_FLOAT32);
         LOG(DEBUG) << "Save tensor output in datatype " <<  dst_desc.GetDataType();
         auto bytes = dst_desc.CalcBytesIncludingPadding();
         vector<char> buffer(bytes);

@@ -30,6 +30,7 @@
 #include "ppl/nn/models/onnx/parsers/onnx/parse_convtranspose_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_cumsum_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_depth_to_space_param.h"
+#include "ppl/nn/models/onnx/parsers/onnx/parse_einsum_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_flatten_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_gather_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_gather_nd_param.h"
@@ -60,7 +61,6 @@
 #include "ppl/nn/models/onnx/parsers/onnx/parse_topk_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_transpose_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_unsqueeze_param.h"
-
 #include "ppl/nn/models/onnx/parsers/mmcv/parse_mmcv_gridsample_param.h"
 #include "ppl/nn/models/onnx/parsers/mmcv/parse_mmcv_modulated_deform_conv2d_param.h"
 #include "ppl/nn/models/onnx/parsers/mmcv/parse_mmcv_nonmaxsupression_param.h"
@@ -137,10 +137,12 @@ ParamParserManager::ParamParserManager() {
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Div", 7, 16, nullptr);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Dropout", 1, 16, nullptr); // will be skip
     // E
+    PPL_REGISTER_OP_WITH_PARAM("", "Einsum", 12, 16, EinSumParam, ParseEinSumParam, PackEinSumParam);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Equal", 7, 16, nullptr);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Erf", 9, 16, nullptr);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Exp", 6, 16, nullptr);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Expand", 8, 16, nullptr);
+
     // F
     PPL_REGISTER_OP_WITH_PARAM("", "Flatten", 1, 16, FlattenParam, ParseFlattenParam, PackFlattenParam);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Floor", 6, 16, nullptr);
