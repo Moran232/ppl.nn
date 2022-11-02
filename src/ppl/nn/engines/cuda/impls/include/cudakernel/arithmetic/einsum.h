@@ -41,4 +41,14 @@ ppl::common::RetCode PPLCUDAEinSum_nbac_ndae_nbdce_ForwardImp(
     const ppl::nn::TensorShape* output_shape,
     void* output,
     std::string equation);
+ppl::common::RetCode PPLCUDAEinSum_nbac_ndae_nbdce_2_ForwardImp(
+    cudaStream_t stream,
+    const ppl::nn::TensorShape* input_shape0,
+    const void* input0,
+    const ppl::nn::TensorShape* input_shape1,
+    const void* input1,
+    const ppl::nn::TensorShape* output_shape,
+    void* output,
+    std::string equation);
+
 #endif //PPLCUDA_KERNEL_INCLUDE_ARITHMETIC_EINSUM_H_
