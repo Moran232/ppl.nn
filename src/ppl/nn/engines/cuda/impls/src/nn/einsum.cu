@@ -50,11 +50,27 @@ __global__ void ppl_cukernel_einsum_nbdce(const T* input0, const T* input1, T* o
         }
         __syncthreads();
 
-        for(int stride=blockDim.x/2; stride>0; stride >>= 1){
-            if(tid < stride)
-                tmp[tid] += tmp[tid + stride];
-            __syncthreads();
-        }
+        // for(int stride=blockDim.x/2; stride>0; stride >>= 1){
+        //     if(tid < stride)
+        //         tmp[tid] += tmp[tid + stride];
+        //     __syncthreads();
+        // }
+        if(tid<128) tmp[tid] += tmp[tid+128];
+        __syncthreads();
+        if(tid<64) tmp[tid] += tmp[tid+64];
+        __syncthreads();
+        if(tid<32) tmp[tid] += tmp[tid+32];
+        __syncthreads();
+        if(tid<16) tmp[tid] += tmp[tid+16];
+        __syncthreads();
+        if(tid<8) tmp[tid] += tmp[tid+8];
+        __syncthreads();
+        if(tid<4) tmp[tid] += tmp[tid+4];
+        __syncthreads();
+        if(tid<2) tmp[tid] += tmp[tid+2];
+        __syncthreads();
+        if(tid<1) tmp[tid] += tmp[tid+1];
+        __syncthreads();
 
         uint64_t output_offset = outer_id * inner + inner_id;
         output[output_offset] = tmp[0];
@@ -92,6 +108,7 @@ __global__ void ppl_cukernel_einsum_nbdc(const T* input0, const T* input1, T* ou
                 tmp[tid] += tmp[tid + stride];
             __syncthreads();
         }
+
         // ncbd = n_id*c*b*d + c_id*b*d + b_id*d + d_id = outer_id * inner + inner_id
         // nbdc
         uint64_t output_offset = n_id*b*d*c + b_id*d*c + d_id*c + c_id;
@@ -195,3 +212,83 @@ ppl::common::RetCode PPLCUDAEinSum_nabc_nadc_nbdc_ForwardImp(
 
     return ppl::common::RC_SUCCESS;
 }
+
+template <typename T>
+__global__ void ppl_cukernel_einsum_nbdce2(const T* input0, const T* input1, T* output, uint64_t outer, uint64_t inner,
+                                        uint64_t n, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e){
+        // nbac * ndae --> nbdce
+        // grid(d, b, n) block(e, c)  
+        // int ix = threadIdx.x + blockDim.x * blockIdx.x;
+        // int iy = threadIdx.y + blockDim.y * blockIdx.y;
+
+        int g_blockId = blockIdx.z * gridDim.y * gridDim.x + blockIdx.y * gridDim.x + blockIdx.x;
+                        // n_id * b * d + b_id * d + d_id
+        int g_threadId = g_blockId * (blockDim.y * blockDim.x) + threadIdx.y * blockDim.x + threadIdx.x;
+                        // () * c * e + c_id * e + e_id
+
+        int n_id = blockIdx.z;
+        int b_id = blockIdx.y;
+        int d_id = blockIdx.x;
+        int c_id = threadIdx.y;
+        int e_id = threadIdx.x;
+        int productDim = a;
+    
+        T sum=0; // when T is unit64,  sum may exceed max(uint64) if preductDim is too big
+        #pragma unroll
+        for(int i=0;i<productDim;++i){
+            uint64_t input0_offset = n_id * b * a * c + b_id * a * c + i * c + c_id;
+            uint64_t input1_offset = n_id * d * a * e + d_id * a * e + i * e + e_id;
+            sum += input0[input0_offset] * input1[input1_offset];
+        }
+        // __syncthreads();
+
+        output[g_threadId] = sum;
+}
+
+
+ppl::common::RetCode PPLCUDAEinSum_nbac_ndae_nbdce_2_ForwardImp(
+    cudaStream_t stream,
+    const ppl::nn::TensorShape* input_shape0,
+    const void* input0,
+    const ppl::nn::TensorShape* input_shape1,
+    const void* input1,
+    const ppl::nn::TensorShape* output_shape,
+    void* output,
+    std::string equation)
+{
+    // nbac * ndae -> nbd(a)ce
+    auto n = input_shape0->GetDim(0);
+    auto b = input_shape0->GetDim(1);
+    auto a = input_shape0->GetDim(2);
+    auto c = input_shape0->GetDim(3);
+    auto d = input_shape1->GetDim(1);
+    auto e = input_shape1->GetDim(3);
+
+    dim3 block(e, c);
+    dim3 grid(d, b, n);
+    int outer=1;
+    int inner=1;
+
+    auto datatype = output_shape->GetDataType();
+    auto dataformat = output_shape->GetDataFormat();
+
+    switch(datatype){
+        case ppl::common::DATATYPE_FLOAT32:{
+            ppl_cukernel_einsum_nbdce2<float><<<grid, block, 0, stream>>>((const float*)input0, (const float*)input1, (float*)output, outer, inner, n, a, b, c, d, e);
+            break;
+        }
+        case ppl::common::DATATYPE_FLOAT16:{
+            ppl_cukernel_einsum_nbdce2<half><<<grid, block, 0, stream>>>((const half*)input0, (const half*)input1, (half*)output, outer, inner, n, a, b, c, d, e);
+            break;
+        }
+        case ppl::common::DATATYPE_INT64:{
+            ppl_cukernel_einsum_nbdce2<int64_t><<<grid, block, 0, stream>>>((const int64_t*)input0, (const int64_t*)input1, (int64_t*)output, outer, inner, n, a, b, c, d, e);
+            break;
+        }
+        default:
+            return ppl::common::RC_UNSUPPORTED;
+    }
+
+    return ppl::common::RC_SUCCESS;
+}
+

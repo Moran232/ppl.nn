@@ -61,7 +61,7 @@ ppl::common::RetCode EinSumKernel::DoExecute(KernelExecContext* ctx) {
     if(ctx->GetInputCount()==2 && equation == "...bac,...dae->...bdce" 
         && input_shape0->GetDimCount()==4){
 
-        status = PPLCUDAEinSum_nbac_ndae_nbdce_ForwardImp(GetStream(), input_shape0, input0, input_shape1, input1, output_shape, output, equation);
+        status = PPLCUDAEinSum_nbac_ndae_nbdce_2_ForwardImp(GetStream(), input_shape0, input0, input_shape1, input1, output_shape, output, equation);
     } else if(ctx->GetInputCount()==2 && equation == "...abc,...adc->...bdc" 
         && input_shape0->GetDimCount()==4){ 
         status = PPLCUDAEinSum_nabc_nadc_nbdc_ForwardImp(GetStream(), input_shape0, input0, input_shape1, input1, output_shape, output, equation);
