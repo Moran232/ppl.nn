@@ -145,11 +145,11 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
             tensor_dims += std::to_string(tensor->GetShape()->GetDim(j)) + " ";
         }
         LOG(DEBUG) << "input tensor [" << i << "]" << tensor->GetName();
-        LOG(DEBUG) << "input  datatype " << tensor->GetShape()->GetDataType() << "  dataformat "
-                   << tensor->GetShape()->GetDataFormat();
-        LOG(DEBUG) << "input  dimcount " << tensor_dim_count;
-        LOG(DEBUG) << "input  dims " << tensor_dims;
-        LOG(DEBUG) << "input tensor size " << tensor_size;
+        LOG(DEBUG) << "input datatype: " << tensor->GetShape()->GetDataType() << "=" << GetDataTypeStr(tensor->GetShape()->GetDataType())
+                   << "  dataformat: " << tensor->GetShape()->GetDataFormat() << "=" << GetDataFormatStr(tensor->GetShape()->GetDataFormat());
+        LOG(DEBUG) << "input dimcount " << tensor_dim_count;
+        LOG(DEBUG) << "input dims " << tensor_dims;
+        LOG(DEBUG) << "input tensor size " << tensor_size << " bytes";;
         total_size += tensor_size;
 
     }
@@ -162,11 +162,11 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
             tensor_dims += std::to_string(tensor->GetShape()->GetDim(j)) + " ";
         }
         LOG(DEBUG) << "output tensor [" << i << "]" << tensor->GetName();
-        LOG(DEBUG) << "output  datatype " << tensor->GetShape()->GetDataType() << " dataformat "
-                   << tensor->GetShape()->GetDataFormat();
-        LOG(DEBUG) << "output  dimcount " << tensor_dim_count;
-        LOG(DEBUG) << "output  dims " << tensor_dims;
-        LOG(DEBUG) << "output tensor size " << tensor_size;
+        LOG(DEBUG) << "output datatype: " << tensor->GetShape()->GetDataType() << "=" << GetDataTypeStr(tensor->GetShape()->GetDataType())
+                   << "  dataformat: " << tensor->GetShape()->GetDataFormat() << "=" << GetDataFormatStr(tensor->GetShape()->GetDataFormat());
+        LOG(DEBUG) << "output dimcount " << tensor_dim_count;
+        LOG(DEBUG) << "output dims " << tensor_dims;
+        LOG(DEBUG) << "output tensor size " << tensor_size << " bytes";
         total_size += tensor_size;
     }
     auto run_begin_ts = std::chrono::system_clock::now();
@@ -190,8 +190,9 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
         auto tensor = ctx->GetOutput<TensorImpl>(i);
         TensorShape dst_desc = *tensor->GetShape();
         dst_desc.SetDataFormat(DATAFORMAT_NDARRAY);
-        dst_desc.SetDataType(DATATYPE_FLOAT32);
+        // dst_desc.SetDataType(DATATYPE_FLOAT32);
         LOG(DEBUG) << "Save tensor output in datatype " <<  dst_desc.GetDataType();
+
         auto bytes = dst_desc.CalcBytesIncludingPadding();
         vector<char> buffer(bytes);
         status = tensor->ConvertToHost(buffer.data(), dst_desc);
@@ -199,7 +200,16 @@ RetCode CudaKernel::Execute(KernelExecContext* ctx) {
             LOG(ERROR) << "convert data of tensor[" << tensor->GetName() << "] failed: " << GetRetCodeStr(status);
             return false;
         }
-        const string out_file_name = "pplnn_output-" + (string)tensor->GetName()  + ".dat";
+
+        std::string tensor_dims = "";
+        for (uint32_t j = 0; j < tensor->GetShape()->GetDimCount(); ++j) {
+            tensor_dims += std::to_string(tensor->GetShape()->GetDim(j)) + "_";
+        }
+        const string out_file_name = "pplnn_output-" + (string)tensor->GetName()
+                                + "-Dim_" + tensor_dims
+                                + "-" + (string)GetDataTypeStr(dst_desc.GetDataType())
+                                + "-" + (string)GetDataFormatStr(dst_desc.GetDataFormat()) + ".dat";
+        LOG(DEBUG) << "Save output: " <<  out_file_name;
         ofstream ofs(out_file_name, ios_base::out | ios_base::binary | ios_base::trunc);
         if (!ofs.is_open()) {
             LOG(ERROR) << "open output file[" << out_file_name << "]";
