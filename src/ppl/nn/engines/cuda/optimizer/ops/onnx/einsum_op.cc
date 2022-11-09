@@ -76,19 +76,22 @@ KernelImpl* EinSumOp::CreateKernelImpl() const {
 }
 
 #ifdef PPLNN_ENABLE_PMX_MODEL
-    // ppl::common::RetCode EinSumOp::SerializeData(const pmx::SerializationContext&, utils::DataStream* ds) const {
-    //     flatbuffers::FlatBufferBuilder builder;
-    //     auto fb_param = pmx::onnx::SerializePoolingParam(param_, &builder);
-    //     auto fb_op_param = pmx::onnx::CreateOpParam(builder, pmx::onnx::OpParamType_PoolingParam, fb_param.Union());
-    //     pmx::onnx::FinishOpParamBuffer(builder, fb_op_param);
-    //     return ds->Write(builder.GetBufferPointer(), builder.GetSize());
-    // }
-    // ppl::common::RetCode EinSumOp::DeserializeData(const pmx::DeserializationContext&, const void* base, uint64_t size) {
-    //     auto fb_op_param = pmx::onnx::GetOpParam(base);
-    //     auto fb_argmax_param = fb_op_param->value_as_PoolingParam();
-    //     pmx::onnx::DeserializePoolingParam(*fb_argmax_param, &param_);
-    //     return ppl::common::RC_SUCCESS;
-    // }
+    ppl::common::RetCode EinSumOp::SerializeData(const pmx::SerializationContext&, utils::DataStream* ds) const {
+        // flatbuffers::FlatBufferBuilder builder;
+        // auto fb_param = pmx::onnx::SerializePoolingParam(param_, &builder);
+        // auto fb_op_param = pmx::onnx::CreateOpParam(builder, pmx::onnx::OpParamType_PoolingParam, fb_param.Union());
+        // pmx::onnx::FinishOpParamBuffer(builder, fb_op_param);
+        // return ds->Write(builder.GetBufferPointer(), builder.GetSize());
+        // TODO
+        return 0;
+    }
+    ppl::common::RetCode EinSumOp::DeserializeData(const pmx::DeserializationContext&, const void* base, uint64_t size) {
+        // auto fb_op_param = pmx::onnx::GetOpParam(base);
+        // auto fb_argmax_param = fb_op_param->value_as_PoolingParam();
+        // pmx::onnx::DeserializePoolingParam(*fb_argmax_param, &param_);
+        // TODO
+        return ppl::common::RC_SUCCESS;
+    }
 #endif
 
 }}} // namespace ppl::nn::cuda
