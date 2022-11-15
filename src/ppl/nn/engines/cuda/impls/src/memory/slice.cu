@@ -72,26 +72,26 @@ bool isFastSliceSupported(const SliceKernelParam& param, int32_t num_dims) {
         int axis        = param.axes[i];
         if (axis < (num_dims - 2)) return false;
         if (param.steps[i] != 1) return false;
-        if (param.starts[i] != 0) return false;
+        //if (param.starts[i] != 0) return false;
     }
     return true;
 }
 
 template <typename T>
 __global__ void ppl_cukernel_slice_fast_ndarray(const T* input, int src_height, int src_width,
-    T* output, int dst_height, int dst_width) {
+    T* output, int dst_height, int dst_width, int hgt_start, int wdt_start) {
     int dst_hgt = blockIdx.y * blockDim.y + threadIdx.y;
     int dst_wdt = blockIdx.x * blockDim.x + threadIdx.x;
     if (dst_hgt >= dst_height || dst_wdt >= dst_width) return;
     int b_idx = blockIdx.z;
     int dst_idx = b_idx * dst_height * dst_width + dst_hgt * dst_width + dst_wdt;
-    int src_idx = b_idx * src_height * src_width + dst_hgt * src_width + dst_wdt;
+    int src_idx = b_idx * src_height * src_width + (dst_hgt + hgt_start) * src_width + dst_wdt + wdt_start;
     output[dst_idx] = input[src_idx];
 }
 
 template <typename T>
 __global__ void ppl_cukernel_slice_fast_nhwc(int channel, const T* input, int src_height, int src_width,
-    int src_pad_channel, T* output, int dst_height, int dst_width, int dst_pad_channel) {
+    int src_pad_channel, T* output, int dst_height, int dst_width, int dst_pad_channel, int hgt_start, int wdt_start) {
     int dst_hw_idx = blockIdx.y * blockDim.y + threadIdx.y;
     int dst_hgt = dst_hw_idx / dst_width;
     int dst_wdt = dst_hw_idx % dst_width;
@@ -99,7 +99,7 @@ __global__ void ppl_cukernel_slice_fast_nhwc(int channel, const T* input, int sr
     if (chl_idx >= channel || dst_hgt >= dst_height) return;
     int b_idx = blockIdx.z;
     int dst_idx = (b_idx * dst_height * dst_width + dst_hgt * dst_width + dst_wdt) * dst_pad_channel + chl_idx;
-    int src_idx = (b_idx * src_height * src_width + dst_hgt * src_width + dst_wdt) * src_pad_channel + chl_idx;
+    int src_idx = (b_idx * src_height * src_width + (dst_hgt + hgt_start) * src_width + dst_wdt + wdt_start) * src_pad_channel + chl_idx;
     output[dst_idx] = input[src_idx];
 }
 
@@ -115,6 +115,20 @@ ppl::common::RetCode PPLCUDASliceForwardImp(
         return ppl::common::RC_SUCCESS;
     int num_dims       = output_shape->GetDimCount();
     if (isFastSliceSupported(param, num_dims)) {
+        
+        int hgt_start = 0;
+        int wdt_start = 0;
+        if(param.axes_num == 1) {
+            wdt_start = param.starts[0];
+        } else {
+            if(param.axes[0] == 2) {
+                hgt_start = param.starts[0];
+                wdt_start = param.starts[1];
+            } else {
+                hgt_start = param.starts[1];
+                wdt_start = param.starts[0];
+            }
+        }
         #define SWITCH_CASE(TYPE) \
         case sizeof(TYPE): { \
             if (output_shape->GetDataFormat() == ppl::common::DATAFORMAT_NDARRAY) { \
@@ -126,7 +140,7 @@ ppl::common::RetCode PPLCUDASliceForwardImp(
                 dim3 block_size(16, 16, 1); \
                 dim3 grid_size(DivUp(dst_width, 16), DivUp(dst_height, 16), batch); \
                 ppl_cukernel_slice_fast_ndarray<<<grid_size, block_size, 0, stream>>>( \
-                    (const TYPE*)input, src_height, src_width, (TYPE*)output, dst_height, dst_width); \
+                    (const TYPE*)input, src_height, src_width, (TYPE*)output, dst_height, dst_width, hgt_start, wdt_start); \
                 return ppl::common::RC_SUCCESS; \
             } else if (output_shape->GetDataFormat() == ppl::common::DATAFORMAT_NHWC8 || \
                         output_shape->GetDataFormat() == ppl::common::DATAFORMAT_NHWC16) { \
@@ -141,7 +155,7 @@ ppl::common::RetCode PPLCUDASliceForwardImp(
                 dim3 block_size(16, 16, 1); \
                 dim3 grid_size(DivUp(channel, 16), DivUp(dst_height * dst_width, 16), batch); \
                 ppl_cukernel_slice_fast_nhwc<<<grid_size, block_size, 0, stream>>>(channel, \
-                    (const TYPE*)input, src_height, src_width, src_pad_channel, (TYPE*)output, dst_height, dst_width, dst_pad_channel); \
+                    (const TYPE*)input, src_height, src_width, src_pad_channel, (TYPE*)output, dst_height, dst_width, dst_pad_channel, hgt_start, wdt_start); \
                 return ppl::common::RC_SUCCESS; \
             } \
         }
