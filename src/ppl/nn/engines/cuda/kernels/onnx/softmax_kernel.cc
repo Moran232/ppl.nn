@@ -38,7 +38,7 @@ ppl::common::RetCode SoftmaxKernel::DoExecute(KernelExecContext* ctx) {
         auto status = PPLCUDASoftmaxForwardImpInt8(GetStream(), input->GetShape(), input->GetBufferPtr(), output->GetShape(),
                                           output->GetBufferPtr(), nullptr, param_->axis, &qparam);
         return status;
-    } else if (input_shape->GetDimCount() == 4 && param_->axis == 3 && input_shape->GetDim(2) == input_shape->GetDim(3)) {
+    } else if (param_->axis == input_shape->GetDimCount() - 1) {
         return PPLCUDAFastSoftmax(GetStream(), input->GetShape(), input->GetBufferPtr(), output->GetShape(),
                                   output->GetBufferPtr(), nullptr, 1);
     } else {
