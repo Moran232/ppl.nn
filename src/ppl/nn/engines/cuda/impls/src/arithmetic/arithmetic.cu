@@ -353,20 +353,26 @@ static void ppl_refine_tensor_shape(ppl::nn::TensorShape *input_shape0,
             input_shape0->SetDim(i - 1, input_shape0->GetDim(i) * input_shape0->GetDim(i - 1));
             input_shape1->SetDim(i - 1, input_shape1->GetDim(i) * input_shape1->GetDim(i - 1));
             output_shape->SetDim(i - 1, output_shape->GetDim(i) * output_shape->GetDim(i - 1));
+
+            input_shape0->SetDim(i, 1);
+            input_shape1->SetDim(i, 1);
+            output_shape->SetDim(i, 1);
+
             real_dim_count--;
-        } else {
-            break;
         }
+        //  else {
+        //     break;
+        // }
     }
-    int dim_diff = dim_count - real_dim_count;
-    for (int i = 0; i < dim_diff; ++i) {
-        input_shape0->SetDim(dim_count - 1 - i, 1);
-        input_shape1->SetDim(dim_count - 1 - i, 1);
-        output_shape->SetDim(dim_count - 1 - i, 1);
-    }
-    input_shape0->SetDimCount(real_dim_count);
-    input_shape1->SetDimCount(real_dim_count);
-    output_shape->SetDimCount(real_dim_count);
+    // int dim_diff = dim_count - real_dim_count;
+    // for (int i = 0; i < dim_diff; ++i) {
+    //     input_shape0->SetDim(dim_count - 1 - i, 1);
+    //     input_shape1->SetDim(dim_count - 1 - i, 1);
+    //     output_shape->SetDim(dim_count - 1 - i, 1);
+    // }
+    // input_shape0->SetDimCount(real_dim_count);
+    // input_shape1->SetDimCount(real_dim_count);
+    // output_shape->SetDimCount(real_dim_count);
 }
 
 static bool ppl_can_one_not_broadcast(const ppl::nn::TensorShape *input_shape0,
