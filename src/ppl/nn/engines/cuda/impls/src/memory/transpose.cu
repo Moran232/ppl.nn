@@ -50,7 +50,7 @@ __global__ void cuda_kernel_fast_trans(
         for (int t = blockIdx.y; t < DivUp(param.n_height, 32); t += gridDim.y) {
             int64_t idx_w = blockIdx.x * blockDim.x + threadIdx.x;
             int64_t idx_h = t * blockDim.y + threadIdx.y;
-            
+
             if (idx_w < param.n_width && idx_h < param.n_height) {
                 int64_t offset                      = n * param.n_height * param.n_width + idx_h * param.n_width + idx_w;
                 share_val[threadIdx.y][threadIdx.x] = input[offset];
@@ -260,6 +260,30 @@ __global__ void ppl_cukernel_transpose(
     output[output_offset] = input[index];
 }
 
+    template <typename T>
+__global__ void ppl_cukernel_transpose_output_first(
+    int64_t num_elems,
+    int num_dims,
+    GArray<DivModFast> output_strides_fast,
+    GArray<int64_t> input_flip_strides,
+    const T *input,
+    T *output)
+{
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= num_elems)
+        return;
+
+    int64_t input_offset = 0;
+    int idx, remain = index;
+    for (int it = 0; it < num_dims; ++it) {
+        output_strides_fast[it].divmod(remain, idx, remain);
+        input_offset += idx * input_flip_strides[it];
+    }
+    // if(index < 1024)
+        // printf("index:%d, input_offset:%d \n", index, (int)input_offset);
+    output[index] = input[input_offset];
+}
+
 template <typename T>
 __global__ void ppl_cukernel_transpose_nhwc(
     int64_t num_elems,
@@ -304,16 +328,20 @@ ppl::common::RetCode PPLCUDATransposeForwardImp(
     int64_t num_elems = output_shape->CalcElementsExcludingPadding();
 
     GArray<DivModFast> input_strides_fast(num_dims);
+    GArray<DivModFast> output_strides_fast(num_dims);
     GArray<int64_t> input_strides(num_dims);
     GArray<int64_t> output_strides(num_dims);
     int64_t acc_output_stride = 1;
     int64_t acc_input_stride  = 1;
     for (int it = num_dims - 1; it >= 0; --it) {
         input_strides_fast[it] = DivModFast(acc_input_stride);
-        output_strides[it]     = acc_output_stride;
+        output_strides_fast[it] = DivModFast(acc_output_stride);
+        output_strides[it] = acc_output_stride;
+        input_strides[it] = acc_input_stride;
         acc_input_stride *= input_shape->GetDim(it);
         acc_output_stride *= output_shape->GetDim(it);
     }
+
     if (output_shape->GetDataFormat() == ppl::common::DATAFORMAT_NHWC8) {
         acc_input_stride  = 1;
         acc_output_stride = 1;
@@ -344,7 +372,14 @@ ppl::common::RetCode PPLCUDATransposeForwardImp(
             }
         }
     }
-
+    GArray<int64_t> input_flip_strides(num_dims);
+    for (int i = 0; i < num_dims; ++i) {
+        for (int j = 0; j < num_dims; ++j) {
+            if (param.perm[j] == i) {
+                input_flip_strides[i] = input_strides[j];
+            }
+        }
+    }
     int block_size = 256;
     int grid_size  = (num_elems + block_size - 1) / block_size;
 
@@ -354,8 +389,8 @@ ppl::common::RetCode PPLCUDATransposeForwardImp(
             ppl_cukernel_transpose_nhwc<<<grid_size, block_size, 0, stream>>>(                                                     \
                 num_elems, num_dims, input_strides_fast, input_strides, output_flip_strides, (const TYPE *)input, (TYPE *)output); \
         } else {                                                                                                                   \
-            ppl_cukernel_transpose<<<grid_size, block_size, 0, stream>>>(                                                          \
-                num_elems, num_dims, input_strides_fast, output_flip_strides, (const TYPE *)input, (TYPE *)output);                \
+            ppl_cukernel_transpose_output_first<<<grid_size, block_size, 0, stream>>>(                                                          \
+                num_elems, num_dims, output_strides_fast, input_flip_strides, (const TYPE *)input, (TYPE *)output);                \
         }                                                                                                                          \
         return ppl::common::RC_SUCCESS;                                                                                            \
     }
