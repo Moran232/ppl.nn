@@ -34,7 +34,7 @@ ppl::common::RetCode IdentityNodeOptimizer::Optimize(ir::Graph* graph) const {
                 LOG(ERROR) << "cannot find identity node[" << identity_node->GetName() << "]'s input/output edge.";
                 return RC_NOT_FOUND;
             }
-            
+
             if (out_edge->CalcConsumerCount() == 0) {
                 continue;
             }
