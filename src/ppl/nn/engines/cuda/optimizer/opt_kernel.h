@@ -284,7 +284,7 @@ protected:
             }
         }
         // Follow given type
-        if (highest == ppl::common::DATATYPE_FLOAT32 && 
+        if (highest == ppl::common::DATATYPE_FLOAT32 &&
            (type == ppl::common::DATATYPE_FLOAT16 ||
             type == ppl::common::DATATYPE_INT8)) {
             highest = type;

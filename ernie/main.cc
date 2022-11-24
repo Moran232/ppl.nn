@@ -1,0 +1,154 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+#include "ppl/nn/models/onnx/runtime_builder_factory.h"
+#include "ppl/nn/engines/cuda/engine_factory.h"
+#include <random>
+#include <iostream>
+#include <memory>
+using namespace std;
+using namespace ppl::nn;
+using namespace ppl::common;
+
+static bool SetRandomInputs(Runtime* runtime) {
+    for (uint32_t c = 0; c < runtime->GetInputCount(); ++c) {
+        auto t = runtime->GetInputTensor(c);
+        auto& shape = *t->GetShape();
+
+        auto nr_element = shape.CalcBytesIncludingPadding() / sizeof(float);
+        vector<float> buffer(nr_element);
+
+        // fill random input data
+        std::default_random_engine eng;
+        std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
+        for (uint32_t i = 0; i < nr_element; ++i) {
+            buffer[i] = dis(eng);
+        }
+
+        // our random data is treated as NDARRAY
+        TensorShape src_desc = *t->GetShape();
+        src_desc.SetDataFormat(DATAFORMAT_NDARRAY);
+
+        // input tensors may require different data format
+        auto status = t->ConvertFromHost(buffer.data(), src_desc);
+        if (status != RC_SUCCESS) {
+            cerr << "set tensor[" << t->GetName() << "] content failed: " << GetRetCodeStr(status) << endl;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static void PrintInputOutputInfo(const Runtime* runtime) {
+    cout << "----- input info -----" << endl;
+    for (uint32_t i = 0; i < runtime->GetInputCount(); ++i) {
+        auto tensor = runtime->GetInputTensor(i);
+        cout << "input[" << i << "]:" << endl << "    name: " << tensor->GetName() << endl;
+
+        string dims_str;
+        auto& shape = *tensor->GetShape();
+        for (uint32_t j = 0; j < shape.GetDimCount(); ++j) {
+            dims_str += " " + std::to_string(shape.GetDim(j));
+        }
+        cout << "    dim(s):" << dims_str << endl
+             << "    DataType: " << GetDataTypeStr(shape.GetDataType()) << endl
+             << "    DataFormat: " << GetDataFormatStr(shape.GetDataFormat()) << endl
+             << "    BytesIncludePadding: " << shape.CalcBytesIncludingPadding() << endl
+             << "    BytesExcludePadding: " << shape.CalcBytesExcludingPadding() << endl;
+    }
+
+    cout << "----- output info -----" << endl;
+    for (uint32_t i = 0; i < runtime->GetOutputCount(); ++i) {
+        auto tensor = runtime->GetOutputTensor(i);
+        cout << "output[" << i << "]:" << endl << "    name: " << tensor->GetName();
+
+        string dims_str;
+        auto& shape = *tensor->GetShape();
+        for (uint32_t j = 0; j < shape.GetDimCount(); ++j) {
+            dims_str += " " + std::to_string(shape.GetDim(j));
+        }
+        cout << "    dim(s):" << dims_str << endl
+             << "    DataType: " << GetDataTypeStr(shape.GetDataType()) << endl
+             << "    DataFormat: " << GetDataFormatStr(shape.GetDataFormat()) << endl
+             << "    BytesIncludePadding: " << shape.CalcBytesIncludingPadding() << endl
+             << "    BytesExcludePadding: " << shape.CalcBytesExcludingPadding() << endl;
+    }
+
+    cout << "----------------------" << endl;
+}
+
+int main(void) {
+    const char* model_file = "tests/testdata/conv.onnx";
+
+    auto cuda_engine = cuda::EngineFactory::Create(cuda::EngineOptions());
+    vector<unique_ptr<Engine>> engines;
+    engines.emplace_back(unique_ptr<Engine>(cuda_engine));
+
+    auto builder = unique_ptr<onnx::RuntimeBuilder>(onnx::RuntimeBuilderFactory::Create());
+    if (!builder) {
+        cerr << "create RuntimeBuilder failed." << endl;
+        return -1;
+    }
+
+    auto status = builder->LoadModel(model_file);
+    if (status != RC_SUCCESS) {
+        cerr << "init OnnxRuntimeBuilder failed: " << GetRetCodeStr(status) << endl;
+        return -1;
+    }
+
+    vector<Engine*> engine_ptrs(engines.size());
+    for (uint32_t i = 0; i < engines.size(); ++i) {
+        engine_ptrs[i] = engines[i].get();
+    }
+    onnx::RuntimeBuilder::Resources resources;
+    resources.engines = engine_ptrs.data();
+    resources.engine_num = engine_ptrs.size();
+
+    status = builder->SetResources(resources);
+    if (status != RC_SUCCESS) {
+        cerr << "onnx RuntimeBuilder SetResources failed: " << GetRetCodeStr(status) << endl;
+        return -1;
+    }
+
+    status = builder->Preprocess();
+    if (status != RC_SUCCESS) {
+        cerr << "builder preprocess failed: " << GetRetCodeStr(status) << endl;
+        return -1;
+    }
+
+    auto runtime = unique_ptr<Runtime>(builder->CreateRuntime());
+    if (!runtime) {
+        cerr << "CreateRuntime failed." << endl;
+        return -1;
+    }
+
+    if (!SetRandomInputs(runtime.get())) {
+        cerr << "SetRandomInputs failed." << endl;
+        return -1;
+    }
+
+    status = runtime->Run();
+    if (status != RC_SUCCESS) {
+        cerr << "Run() failed: " << GetRetCodeStr(status) << endl;
+        return -1;
+    }
+
+    PrintInputOutputInfo(runtime.get());
+
+    return 0;
+}
