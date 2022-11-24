@@ -283,6 +283,9 @@ protected:
                 highest = in_shape->GetDataType();
             }
         }
+        if (highest == ppl::common::DATATYPE_FLOAT32 && type == ppl::common::DATATYPE_FLOAT16) {
+            highest = ppl::common::DATATYPE_FLOAT16;
+        }
         for (uint32_t i = 0; i < info->GetInputCount(); ++i) {
             auto in_shape = info->GetInput<TensorImpl>(i)->GetShape();
             in_shape->SetDataType(highest);
