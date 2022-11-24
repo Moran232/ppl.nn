@@ -856,6 +856,38 @@ __global__ void ppl_cukernel_arithmetic_one_broadcast(
     uint64_t offset1 = first_shorter ? index : calc_index;
     output[index] = ppl_arithmetic_scalar<op_type, T>(input0[offset0], input1[offset1]);
 }
+#define FETCH_FLOAT4(pointer) (reinterpret_cast<float4*>(&(pointer))[0])
+template<ArithmeticOpType op_type>
+__global__ void ppl_cukernel_arithmetic_one_broadcast_float4(
+    const uint64_t num_elems,
+    const int outer_stride, 
+    const int inner_dim, 
+    const bool first_shorter, 
+    const float *input0,
+    const float* input1,
+    float *output) {
+    
+    uint64_t index = (blockIdx.x * blockDim.x + threadIdx.x) * 4;
+    // blockDim.x = 64 inner_dim %4==0
+    if (index >= num_elems) return;
+    int inner_idx = index % inner_dim;
+    int outer_idx = index / outer_stride;
+    uint64_t calc_index = outer_idx * inner_dim + inner_idx;
+    uint64_t offset0 = first_shorter ? calc_index : index;
+    uint64_t offset1 = first_shorter ? index : calc_index;
+
+    auto inp0 = const_cast<float*>(input0);
+    auto inp1 = const_cast<float*>(input1);
+    float4 rega = FETCH_FLOAT4(inp0[offset0]);
+    float4 regb = FETCH_FLOAT4(inp1[offset1]);
+    float4 regc;
+    regc.x = ppl_arithmetic_scalar<op_type, float>(rega.x, regb.x);
+    regc.y = ppl_arithmetic_scalar<op_type, float>(rega.y, regb.y);
+    regc.z = ppl_arithmetic_scalar<op_type, float>(rega.z, regb.z);
+    regc.w = ppl_arithmetic_scalar<op_type, float>(rega.w, regb.w);
+
+    FETCH_FLOAT4(output[index]) = regc;
+}
 
 template<ArithmeticOpType op_type, typename T>
 __global__ void ppl_cukernel_arithmetic_one_broadcast_int8(
