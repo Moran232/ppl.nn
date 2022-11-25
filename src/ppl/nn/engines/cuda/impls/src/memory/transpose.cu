@@ -180,6 +180,57 @@ __global__ void cuda_kernel_middle_trans(
     output[offset] = input[tid];
 }
 
+template <typename T>
+__global__ void cuda_kernel_middle_trans_opt(
+    const T *input,
+    int64_t num_elems,
+    FastTransposeParam param,
+    DivModFast n_inner_fast,
+    DivModFast n_width_fast,
+    DivModFast n_height_fast,
+    T *output)
+{
+    int64_t tid = blockDim.x * blockIdx.x + threadIdx.x;
+    if (tid >= num_elems)
+        return;
+
+    int inner_idx_q, inner_idx, width_idx_q, width_idx, height_idx, outer_idx;
+    n_inner_fast.divmod(tid, inner_idx_q, inner_idx);
+    n_width_fast.divmod(inner_idx_q, width_idx_q, width_idx);
+    n_height_fast.divmod(width_idx_q, outer_idx, height_idx);
+
+    int64_t offset = outer_idx * param.n_inner * param.n_width * param.n_height + height_idx * param.n_inner +
+                     width_idx * param.n_height * param.n_inner + inner_idx;
+    output[offset] = input[tid];
+}
+
+#define FETCH_FLOAT4(pointer) (reinterpret_cast<float4*>(&(pointer))[0])
+__global__ void cuda_kernel_middle_trans_opt_float4(
+    const float *input,
+    int64_t num_elems,
+    FastTransposeParam param,
+    DivModFast n_inner_fast,
+    DivModFast n_width_fast,
+    DivModFast n_height_fast,
+    float *output)
+{
+    int64_t tid = (blockDim.x * blockIdx.x + threadIdx.x)*4;
+    if (tid >= num_elems)
+        return;
+
+    int inner_idx_q, inner_idx, width_idx_q, width_idx, height_idx, outer_idx;
+    n_inner_fast.divmod(tid, inner_idx_q, inner_idx);
+    n_width_fast.divmod(inner_idx_q, width_idx_q, width_idx);
+    n_height_fast.divmod(width_idx_q, outer_idx, height_idx);
+
+    int64_t offset = outer_idx * param.n_inner * param.n_width * param.n_height + height_idx * param.n_inner +
+                     width_idx * param.n_height * param.n_inner + inner_idx;
+    auto inp = const_cast<float*>(input);
+    float4 v = FETCH_FLOAT4(inp[tid]);
+
+    FETCH_FLOAT4(output[offset]) = v;
+}
+
 bool MiddleFastTransposeSupport(
     FastTransposeParam *fast_param,
     const ppl::nn::TensorShape *input_shape,
@@ -219,12 +270,25 @@ ppl::common::RetCode PPLCUDATransposeMiddleFastForwardImp(
     dim3 dim_block(block_size, 1, 1);
     int64_t num_elems = output_shape->CalcElementsIncludingPadding();
     dim3 dim_grid(DivUp(num_elems, block_size), 1, 1);
+    DivModFast n_inner_fast(param.n_inner);
+    DivModFast n_width_fast(param.n_width);
+    DivModFast n_height_fast(param.n_height);
 
-#define SWITCH_CASE(TYPE)                                             \
-    case sizeof(TYPE): {                                              \
-        cuda_kernel_middle_trans<<<dim_grid, dim_block, 0, stream>>>( \
-            (const TYPE *)input, num_elems, param, (TYPE *)output);   \
-        return ppl::common::RC_SUCCESS;                               \
+    // int num_dims    = input_shape->GetDimCount();
+    // if(input_shape->GetDim(num_dims-1) % 4 ==0){
+    //     dim_block.x = 64;
+    //     cuda_kernel_middle_trans_opt_float4<<<dim_grid, dim_block, 0, stream>>>(
+    //         (const float *)input, num_elems, param, n_inner_fast,
+    //         n_width_fast, n_height_fast, (float *)output);
+    //     return ppl::common::RC_SUCCESS;
+    // }
+
+#define SWITCH_CASE(TYPE)                                                 \
+    case sizeof(TYPE): {                                                  \
+        cuda_kernel_middle_trans_opt<<<dim_grid, dim_block, 0, stream>>>( \
+            (const TYPE *)input, num_elems, param, n_inner_fast,          \
+            n_width_fast, n_height_fast, (TYPE *)output);                 \
+        return ppl::common::RC_SUCCESS;                                   \
     }
 
     switch (ppl::common::GetSizeOfDataType(input_shape->GetDataType())) {
@@ -279,8 +343,6 @@ __global__ void ppl_cukernel_transpose_output_first(
         output_strides_fast[it].divmod(remain, idx, remain);
         input_offset += idx * input_flip_strides[it];
     }
-    // if(index < 1024)
-        // printf("index:%d, input_offset:%d \n", index, (int)input_offset);
     output[index] = input[input_offset];
 }
 
@@ -389,7 +451,7 @@ ppl::common::RetCode PPLCUDATransposeForwardImp(
             ppl_cukernel_transpose_nhwc<<<grid_size, block_size, 0, stream>>>(                                                     \
                 num_elems, num_dims, input_strides_fast, input_strides, output_flip_strides, (const TYPE *)input, (TYPE *)output); \
         } else {                                                                                                                   \
-            ppl_cukernel_transpose_output_first<<<grid_size, block_size, 0, stream>>>(                                                          \
+            ppl_cukernel_transpose<<<grid_size, block_size, 0, stream>>>(                                                          \
                 num_elems, num_dims, output_strides_fast, input_flip_strides, (const TYPE *)input, (TYPE *)output);                \
         }                                                                                                                          \
         return ppl::common::RC_SUCCESS;                                                                                            \
