@@ -61,6 +61,7 @@
 #include "ppl/nn/models/onnx/parsers/onnx/parse_topk_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_transpose_param.h"
 #include "ppl/nn/models/onnx/parsers/onnx/parse_unsqueeze_param.h"
+#include "ppl/nn/models/onnx/parsers/onnx/parse_reshape_param.h"
 #include "ppl/nn/models/onnx/parsers/mmcv/parse_mmcv_gridsample_param.h"
 #include "ppl/nn/models/onnx/parsers/mmcv/parse_mmcv_modulated_deform_conv2d_param.h"
 #include "ppl/nn/models/onnx/parsers/mmcv/parse_mmcv_nonmaxsupression_param.h"
@@ -198,7 +199,8 @@ ParamParserManager::ParamParserManager() {
     PPL_REGISTER_OP_WITH_PARAM("", "ReduceProd", 1, 16, ReduceParam, ParseReduceParam, PackReduceParam);
     PPL_REGISTER_OP_WITH_PARAM("", "ReduceSum", 1, 16, ReduceParam, ParseReduceParam, PackReduceParam);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Relu", 6, 16, nullptr);
-    PPL_REGISTER_OP_WITHOUT_PARAM("", "Reshape", 5, 13, nullptr);
+    // PPL_REGISTER_OP_WITHOUT_PARAM("", "Reshape", 5, 16, nullptr);
+    PPL_REGISTER_OP_WITH_PARAM("", "Reshape", 1, 16, ReshapeParam, ParseReshapeParam, PackReshapeParam);
     PPL_REGISTER_OP_WITH_PARAM("", "Resize", 11, 16, ResizeParam, ParseResizeParam, PackResizeParam);
     PPL_REGISTER_OP_WITH_PARAM("", "RoiAlign", 10, 15, RoiAlignParam, ParseRoiAlignParam, PackRoiAlignParam);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Round", 11, 16, nullptr);
@@ -207,7 +209,7 @@ ParamParserManager::ParamParserManager() {
                                PackScatterElementsParam);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "ScatterND", 11, 15, nullptr);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "SequenceAt", 11, 16, nullptr);
-    PPL_REGISTER_OP_WITHOUT_PARAM("", "Shape", 1, 14, nullptr);
+    PPL_REGISTER_OP_WITHOUT_PARAM("", "Shape", 1, 16, nullptr);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Sigmoid", 6, 16, nullptr);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Sign", 9, 16, nullptr);
     PPL_REGISTER_OP_WITHOUT_PARAM("", "Sin", 7, 16, nullptr);

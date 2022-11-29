@@ -29,8 +29,7 @@ RetCode ParseUnsqueezeParam(const ::onnx::NodeProto& pb_node, const ParamParserE
 
     utils::GetNodeAttr(pb_node, "axes", &param->axes);
     if (param->axes.empty()) {
-        LOG(ERROR) << "axes is required.";
-        return RC_INVALID_VALUE;
+        LOG(DEBUG) << "axes is set as input when opset >=13.";
     }
     return RC_SUCCESS;
 }

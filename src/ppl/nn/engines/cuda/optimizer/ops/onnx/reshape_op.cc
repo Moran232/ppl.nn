@@ -23,10 +23,17 @@
 
 using namespace std;
 using namespace ppl::common;
+using namespace ppl::nn::onnx;
 
 namespace ppl { namespace nn { namespace cuda {
 
 RetCode ReshapeOp::Init(const OptKernelOptions& options) {
+    auto status = GenericLoadParam<ReshapeParam>(options, &param_);
+    if (status != RC_SUCCESS) {
+        LOG(ERROR) << "load param failed: " << GetRetCodeStr(status);
+        return status;
+    }
+
     return RC_SUCCESS;
 }
 
@@ -45,7 +52,7 @@ ReshapeOp::ReshapeOp(const ir::Node* node) : CudaOptKernel(node) {
         return status;
     };
 
-    infer_dims_func_ = [](InputOutputInfo* info) -> RetCode {
+    infer_dims_func_ = [this](InputOutputInfo* info) -> RetCode {
         if (info->GetInputCount() != 2) {
             LOG(ERROR) << "2 input required.";
             return RC_INVALID_VALUE;
@@ -55,7 +62,10 @@ ReshapeOp::ReshapeOp(const ir::Node* node) : CudaOptKernel(node) {
         if (!input->GetBufferPtr()) {
             return RC_NOT_FOUND;
         }
-
+        if(param_.allowzero !=0){
+            LOG(ERROR) << "Not supported allowzero == 1 yet";
+            return RC_INVALID_VALUE;
+        }
         const TensorShape& dst_desc = *input->GetShape();
         vector<int64_t> shape_data(dst_desc.CalcElementsIncludingPadding());
         auto status = input->CopyToHost(shape_data.data());

@@ -15,25 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef _ST_HPC_PPL_NN_ENGINES_CUDA_KERNELS_ONNX_RESHAPE_KERNEL_H_
-#define _ST_HPC_PPL_NN_ENGINES_CUDA_KERNELS_ONNX_RESHAPE_KERNEL_H_
+#include "ppl/nn/models/onnx/parsers/onnx/parse_reshape_param.h"
+#include "ppl/nn/models/onnx/utils.h"
+using namespace std;
+using namespace ppl::common;
 
-#include "ppl/nn/engines/cuda/kernel.h"
+namespace ppl { namespace nn { namespace onnx {
 
-#include "ppl/nn/params/onnx/reshape_param.h"
-namespace ppl { namespace nn { namespace cuda {
+RetCode ParseReshapeParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraArgs& args, ir::Node*, ir::Attr* arg) {
+    auto param = static_cast<ReshapeParam*>(arg);
+    utils::GetNodeAttr(pb_node, "allowzero", &param->allowzero, 0);
+    return RC_SUCCESS;
+}
 
-class ReshapeKernel : public CudaKernel {
-public:
-    ReshapeKernel(const ir::Node* node) : CudaKernel(node) {}
+RetCode PackReshapeParam(const ir::Node*, const ir::Attr* arg, ::onnx::NodeProto* pb_node) {
+    auto param = static_cast<const ReshapeParam*>(arg);
+    utils::SetNodeAttr(pb_node, "allowzero", param->allowzero);
+    return RC_SUCCESS;
+}
 
-private:
-    ppl::common::RetCode DoExecute(KernelExecContext*) override;
-private:
-    const ppl::nn::onnx::ReshapeParam* param_ = nullptr;
-
-};
-
-}}} // namespace ppl::nn::cuda
-
-#endif
+}}} // namespace ppl::nn::onnx

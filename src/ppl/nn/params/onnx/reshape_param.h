@@ -15,25 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef _ST_HPC_PPL_NN_ENGINES_CUDA_KERNELS_ONNX_RESHAPE_KERNEL_H_
-#define _ST_HPC_PPL_NN_ENGINES_CUDA_KERNELS_ONNX_RESHAPE_KERNEL_H_
+#ifndef _ST_HPC_PPL_NN_PARAMS_ONNX_RESHAPE_PARAM_H_
+#define _ST_HPC_PPL_NN_PARAMS_ONNX_RESHAPE_PARAM_H_
 
-#include "ppl/nn/engines/cuda/kernel.h"
+#include "ppl/nn/ir/attr.h"
+#include <stdint.h>
 
-#include "ppl/nn/params/onnx/reshape_param.h"
-namespace ppl { namespace nn { namespace cuda {
+namespace ppl { namespace nn { namespace onnx {
 
-class ReshapeKernel : public CudaKernel {
-public:
-    ReshapeKernel(const ir::Node* node) : CudaKernel(node) {}
+struct ReshapeParam final : public ir::TypedAttr<ReshapeParam> {
+    int32_t allowzero;
 
-private:
-    ppl::common::RetCode DoExecute(KernelExecContext*) override;
-private:
-    const ppl::nn::onnx::ReshapeParam* param_ = nullptr;
-
+    bool operator==(const ReshapeParam& p) const {
+        return this->allowzero == p.allowzero;
+    }
 };
 
-}}} // namespace ppl::nn::cuda
+}}} // namespace ppl::nn::onnx
 
 #endif
