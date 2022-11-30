@@ -145,68 +145,73 @@ ppl::common::RetCode PPLCUDASoftmaxForwardImpInt8(
 }
 
 
-template <typename Tin, typename MaskT, typename Tout,                                              
-            typename TCompute = float>                                                              
-__global__ void SoftmaxScoreKernel32Mask(                                                    
-    const Tin* in, const MaskT* key_padding_mask, Tout* out,                                        
+template <typename Tin, typename MaskT, typename Tout,
+            typename TCompute = float>
+__global__ void SoftmaxScoreKernel32Mask(
+    const Tin* in, const MaskT* key_padding_mask, Tout* out,
     const int B, const int T, int mask_dim) {
-    auto cur_in = in + blockIdx.x * T;                                                          
-    auto cur_out = out + blockIdx.x * T;                                                        
-    auto cur_mask = key_padding_mask + blockIdx.x * mask_dim / B;                                                  
-    TCompute log_sum = CudaLogZero<TCompute>();                                                  
-    for (auto tid = threadIdx.x; tid < T; tid += blockDim.x) {                                  
-        TCompute maskv = (TCompute) static_cast<float>(_Ldg(cur_mask + tid));                  
-        log_sum =                                                                               
-                _LogAdd((TCompute)__ldg_ver_ctrl(cur_in + tid) * ((TCompute)1.0f - maskv) +              
-                        CudaLogZero<TCompute>() * maskv, log_sum);                              
-    }                                                                                           
-    log_sum = WarpReduceLogAddSum(log_sum);                                                     
-    for (auto tid = threadIdx.x; tid < T; tid += blockDim.x) {                                  
-        TCompute maskv = (TCompute) static_cast<float>(_Ldg(cur_mask + tid));                   
-        cur_out[tid] = (Tout)(_Exp((TCompute)__ldg_ver_ctrl(cur_in + tid) - log_sum) *   
-                        (TCompute)(1.0f - maskv));                                              
+    auto cur_in = in + blockIdx.x * T;
+    auto cur_out = out + blockIdx.x * T;
+    auto cur_mask = key_padding_mask + blockIdx.x * mask_dim / B;
+    TCompute log_sum = CudaLogZero<TCompute>();
+    for (auto tid = threadIdx.x; tid < T; tid += blockDim.x) {
+        TCompute maskv = (TCompute) static_cast<float>(_Ldg(cur_mask + tid));
+        log_sum =
+                _LogAdd((TCompute)__ldg_ver_ctrl(cur_in + tid) * ((TCompute)1.0f - maskv) +
+                        CudaLogZero<TCompute>() * maskv, log_sum);
+    }
+    WarpReduceLogAddSum(log_sum);
+    for (auto tid = threadIdx.x; tid < T; tid += blockDim.x) {
+        TCompute maskv = (TCompute) static_cast<float>(_Ldg(cur_mask + tid));
+        cur_out[tid] = (Tout)(_Exp((TCompute)__ldg_ver_ctrl(cur_in + tid) - log_sum) *
+                        (TCompute)(1.0f - maskv));
     }
 }
-        
 
-
-
-
-template <typename Tin, typename MaskT, typename Tout,                                              
-            typename TCompute = float>                                                              
-__global__ void SoftmaxScoreKernel64Mask(                                                    
-    const Tin* in, const MaskT* key_padding_mask, Tout* out,                                        
-    const int B, const int T, int mask_dim) {                                                        
-    auto cur_in = in + blockIdx.x * T;                                                          
-    auto cur_out = out + blockIdx.x * T;                                                        
+template <typename Tin, typename MaskT, typename Tout,
+            typename TCompute = float>
+__global__ void SoftmaxScoreKernel64Mask(
+    const Tin* in, const MaskT* key_padding_mask, Tout* out,
+    const int B, const int T, int mask_dim) {
+    auto cur_in = in + blockIdx.x * T;
+    auto cur_out = out + blockIdx.x * T;
     auto cur_mask = key_padding_mask + blockIdx.x * mask_dim / B;
     __shared__ TCompute sm[2];
     TCompute log_sum = CudaLogZero<TCompute>();
     for (auto tid = threadIdx.x; tid < T; tid += blockDim.x) {
-        TCompute maskv = (TCompute) static_cast<float>(_Ldg(cur_mask + tid));                   
-        log_sum =                                                                               
-                _LogAdd((TCompute)__ldg_ver_ctrl(cur_in + tid) * ((TCompute)1.0f - maskv) +              
-                        CudaLogZero<TCompute>() * maskv, log_sum);                              
-    }                                                                                           
-    auto lane_id = threadIdx.x & 0x1f;                                                          
-    auto wid = threadIdx.x >> 5;                                                                
-    log_sum = WarpReduceLogAddSum(log_sum);                                                     
-    if(lane_id == 0) {                                                                          
-        sm[wid] = log_sum;                                                                      
-    }                                                                                           
-    __syncthreads();                                                                            
-    if (lane_id == 0) {                                                                         
-        log_sum = _LogAdd(sm[0], sm[1]);                                                        
-    }                                                                                           
-    __syncthreads();                                                                            
-    log_sum = WARP_SHFL(log_sum, 0);                                                            
-    for (auto tid = threadIdx.x; tid < T; tid += blockDim.x) {                                  
-        TCompute maskv = (TCompute) static_cast<float>(_Ldg(cur_mask + tid));                   
-        cur_out[tid] = (Tout)(_Exp((TCompute)__ldg_ver_ctrl(cur_in + tid) - log_sum) *                 
-                        (TCompute)(1.0f - maskv));                                              
-    }                                                                                           
+        TCompute maskv = (TCompute) static_cast<float>(_Ldg(cur_mask + tid));
+        log_sum =
+                _LogAdd((TCompute)__ldg_ver_ctrl(cur_in + tid) * ((TCompute)1.0f - maskv) +
+                        CudaLogZero<TCompute>() * maskv, log_sum);
+    }
+    auto lane_id = threadIdx.x & 0x1f;
+    auto wid = threadIdx.x >> 5;
+    WarpReduceLogAddSum(log_sum);
+    if(lane_id == 0) {
+        sm[wid] = log_sum;
+    }
+    __syncthreads();
+    if (lane_id == 0) {
+        log_sum = _LogAdd(sm[0], sm[1]);
+    }
+    __syncthreads();
+    log_sum = WARP_SHFL(log_sum, 0);
+    for (auto tid = threadIdx.x; tid < T; tid += blockDim.x) {
+        TCompute maskv = (TCompute) static_cast<float>(_Ldg(cur_mask + tid));
+        cur_out[tid] = (Tout)(_Exp((TCompute)__ldg_ver_ctrl(cur_in + tid) - log_sum) *
+                        (TCompute)(1.0f - maskv));
+    }
 }
 
+template<typename T>
+__device__ __forceinline__ void WarpReduceMax(T& val){
+#pragma unroll
+    for(int mask = 16; mask>0; mask >>=1){
+        T b = WARP_SHFL_XOR(val, mask, 32);
+        val = val >= b ? val : b;
+    }
+    // return val;
+}
 
 template<typename Tin, typename Tout, typename TCompute = float>
 __global__ void SoftmaxScoreKernel32(const Tin* in, Tout* out, const int T) {
@@ -214,10 +219,12 @@ __global__ void SoftmaxScoreKernel32(const Tin* in, Tout* out, const int T) {
     auto cur_out = out + blockIdx.x * T;
     // reduce log sum
     TCompute log_sum = CudaLogZero<TCompute>();
+    #pragma unroll
     for(auto tid = threadIdx.x; tid < T; tid += blockDim.x) {
         log_sum = _LogAdd((TCompute)__ldg_ver_ctrl(cur_in + tid), log_sum);
     }
-    log_sum = WarpReduceLogAddSum(log_sum);
+    WarpReduceLogAddSum(log_sum);
+    #pragma unroll
     for(auto tid = threadIdx.x; tid < T; tid += blockDim.x) {
         cur_out[tid] = _Exp((TCompute)__ldg_ver_ctrl(cur_in + tid) - log_sum);
     }
@@ -230,18 +237,48 @@ __global__ void SoftmaxScoreKernel64(const Tin* in, Tout* out, const int T) {
     __shared__ TCompute sm[2];
     // reduce log sum
     TCompute log_sum = CudaLogZero<TCompute>();
+    #pragma unroll
     for(auto tid = threadIdx.x; tid < T; tid += blockDim.x) {
         log_sum = _LogAdd((TCompute)__ldg_ver_ctrl(cur_in + tid), log_sum);
     }
     auto lane_id = threadIdx.x & 0x1f;
     auto wid = threadIdx.x >> 5;
-    log_sum = WarpReduceLogAddSum(log_sum);
+    WarpReduceLogAddSum(log_sum);
     if(lane_id == 0) {
         sm[wid] = log_sum;
     }
     __syncthreads();
     if (lane_id == 0) {
         log_sum = _LogAdd(sm[0], sm[1]);
+    }
+    __syncthreads();
+    log_sum = WARP_SHFL(log_sum, 0);
+    #pragma unroll
+    for(auto tid = threadIdx.x; tid < T; tid += blockDim.x) {
+        cur_out[tid] = _Exp((TCompute)__ldg_ver_ctrl(cur_in + tid) - log_sum);
+    }
+}
+template<typename Tin, typename Tout, typename TCompute = float>
+__global__ void SoftmaxScoreKernel128(const Tin* in, Tout* out, const int T) {
+    auto cur_in = in + blockIdx.x * T;
+    auto cur_out = out + blockIdx.x * T;
+    __shared__ TCompute sm[4];
+    // reduce log sum
+    TCompute log_sum = CudaLogZero<TCompute>();
+    for(auto tid = threadIdx.x; tid < T; tid += blockDim.x) {
+        log_sum = _LogAdd((TCompute)__ldg_ver_ctrl(cur_in + tid), log_sum);
+    }
+    auto lane_id = threadIdx.x & 0x1f;
+    auto wid = threadIdx.x >> 5;
+    WarpReduceLogAddSum(log_sum);
+    if(lane_id == 0) {
+        sm[wid] = log_sum;
+    }
+    __syncthreads();
+    if (lane_id == 0) {
+        float log_sum1 = _LogAdd(sm[0], sm[1]);
+        float log_sum2 = _LogAdd(sm[2], sm[3]);
+        log_sum = _LogAdd(log_sum1, log_sum2);
     }
     __syncthreads();
     log_sum = WARP_SHFL(log_sum, 0);

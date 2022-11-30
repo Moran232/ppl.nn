@@ -86,21 +86,21 @@ __device__ __inline__ int8_t ppl_scalar_unary<Unary_Relu, int8_t>(const int8_t& 
 template <>
 __device__ __inline__ float ppl_scalar_unary<Unary_Sigmoid, float>(const float& in_val)
 {
-    return 1.f / (1.f + expf(-in_val));
+    return 1.f / (1.f + __expf(-in_val));
 }
 
 template <>
 __device__ __inline__ half ppl_scalar_unary<Unary_Sigmoid, half>(const half& in_val)
 {
     float in_valf = __half2float(in_val);
-    float resf    = 1.f / (1.f + expf(-in_valf));
+    float resf    = 1.f / (1.f + __expf(-in_valf));
     return __float2half(resf);
 }
 
 template <>
 __device__ __inline__ int8_t ppl_scalar_unary<Unary_Sigmoid, int8_t>(const int8_t& in_val)
 {
-    return 1 / (1 + int8_t(expf(float(-in_val))));
+    return 1 / (1 + int8_t(__expf(float(-in_val))));
 }
 
 template <>
