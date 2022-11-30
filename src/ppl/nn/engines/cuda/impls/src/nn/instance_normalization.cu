@@ -28,8 +28,8 @@ __device__ __forceinline__ void BlockDoubleReduceSum(T& val0, T& val1) {
     int lane = threadIdx.x & 0x1f;
     int wid = threadIdx.x >> 5;
 
-    val0 = WarpReduceSum(val0);
-    val1 = WarpReduceSum(val1);
+    WarpReduceSum(val0);
+    WarpReduceSum(val1);
     if(lane == 0) {
         shared0[wid] = val0;
         shared1[wid] = val1;
@@ -38,8 +38,8 @@ __device__ __forceinline__ void BlockDoubleReduceSum(T& val0, T& val1) {
 
     val0 = (lane < (blockDim.x >> 5)) ? shared0[lane] : (T)0.0f;
     val1 = (lane < (blockDim.x >> 5)) ? shared1[lane] : (T)0.0f;
-    val0 = WarpReduceSum(val0);
-    val1 = WarpReduceSum(val1);
+    WarpReduceSum(val0);
+    WarpReduceSum(val1);
     return;
 }
 

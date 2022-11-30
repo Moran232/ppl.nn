@@ -10,7 +10,7 @@ __device__ __forceinline__ T _Exp(T a);
 
 template<>
 __device__ __forceinline__ float _Exp<float>(float a) {
-    return expf(a);
+    return __expf(a);
 }
 
 template<>
@@ -60,7 +60,7 @@ __device__ __forceinline__ T _SafeExp(const T v) {
 
 template<typename T>
 __device__ __forceinline__ T _LogAdd(const T x, const T y) {
-    return x + max(log(_SafeExp(y - x) + (T)1.0f), y - x);
+    return x + max(__logf(_SafeExp(y - x) + (T)1.0f), y - x);
 }
 
 #define FINAL_MASK 0xffffffff
@@ -86,17 +86,17 @@ __device__ __forceinline__ T WARP_SHFL_XOR(T value, int laneMask,
 }
 
 template<typename T>
-__device__ __forceinline__ T WarpReduceSum(T val) {
+__device__ __forceinline__ void WarpReduceSum(T& val) {
     for (int mask = 16; mask > 0; mask >>= 1)
         val += WARP_SHFL_XOR(val, mask, 32, FINAL_MASK);
-    return val;
+    // return val;
 }
 
 template<typename T>
-__device__ __forceinline__ T WarpReduceLogAddSum(T val) {
+__device__ __forceinline__ void WarpReduceLogAddSum(T& val) {
     for (int mask = 16; mask > 0; mask >>= 1)
         val = _LogAdd(WARP_SHFL_XOR(val, mask, 32, FINAL_MASK), val);
-    return val;
+    // return val;
 }
 
 template <typename T>
@@ -105,14 +105,14 @@ __forceinline__ __device__ T blockReduceSum(T val) {
   int lane = threadIdx.x & 0x1f;
   int wid = threadIdx.x >> 5;
 
-  val = WarpReduceSum<T>(val);
+  WarpReduceSum<T>(val);
 
   if (lane == 0) shared[wid] = val;
   __syncthreads();
 
   if (wid == 0) {
       val = (threadIdx.x < ((blockDim.x + 31) >> 5)) ? shared[lane] : (T)0.0f;
-      val = WarpReduceSum<T>(val);
+      WarpReduceSum<T>(val);
       return val;
   }
   return (T)0.0f;
@@ -125,13 +125,13 @@ __device__ __forceinline__ T BlockReduceSum(T val) {
     int lane = threadIdx.x & 0x1f;
     int wid = threadIdx.x >> 5;
 
-    val = WarpReduceSum(val);
+    WarpReduceSum(val);
     if(lane == 0) shared[wid] = val;
     __syncthreads();
 
     val = (lane < (blockDim.x >> 5)) ? shared[lane] : (T)0.0f;
     __syncthreads();
-    val = WarpReduceSum(val);
+    WarpReduceSum(val);
     return val;
 }
 
