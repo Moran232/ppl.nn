@@ -74,7 +74,8 @@ double MatMulAlgorithm::ExcuteTimer(const ir::Node* node, OptKernelOptions& opti
     auto shape_in1 = *options.tensors->find(node->GetInput(1))->second->GetShape();
     auto shape_in2 = TensorShape();
     auto shape_out = *options.tensors->find(node->GetOutput(0))->second->GetShape();
-    auto align_size = ppl::common::cuda::GetDataFormatChannelAlignment(shape_in0.GetDataFormat());
+    // auto align_size = ppl::common::cuda::GetDataFormatChannelAlignment(shape_in0.GetDataFormat());
+    int align_size = 8;
 
     auto dim_count0 = shape_in0.GetDimCount();
     auto dim_count1 = shape_in1.GetDimCount();
@@ -156,6 +157,8 @@ double MatMulAlgorithm::ExcuteTimer(const ir::Node* node, OptKernelOptions& opti
 
     // Padding
     auto K = shape_in0.GetDim(dim_count0 - 1);
+    // if(shape_in0.GetDim(dim_count0-1) != shape_in1.GetDim(dim_count1 - 1 - 1))
+    //     K = shape_in1.GetDim(dim_count1 - 1 - 1);
     auto N = shape_in1.GetDim(dim_count1 - 1);
 
     shape_in0.SetDim(dim_count0 - 1, (K + align_size - 1) / align_size * align_size);
@@ -181,6 +184,7 @@ double MatMulAlgorithm::ExcuteTimer(const ir::Node* node, OptKernelOptions& opti
 #ifdef PPLNN_ENABLE_CUDA_JIT
     // Do select
     LOG(INFO) << "Compiling " << node->GetName();
+
     if (shape_in0.GetDataType() == ppl::common::DATATYPE_FLOAT16) {
         timer = PPLCUDABgemmJITSelectKernel(options.device, stream, shape_in0.GetDataType(), &shape_in0, input_buffer.addr,
                                             &shape_in1, weight_buffer.addr, bias_buffer.addr, &shape_out,
