@@ -283,8 +283,11 @@ protected:
                 highest = in_shape->GetDataType();
             }
         }
-        if (highest == ppl::common::DATATYPE_FLOAT32 && type == ppl::common::DATATYPE_FLOAT16) {
-            highest = ppl::common::DATATYPE_FLOAT16;
+        // Follow given type
+        if (highest == ppl::common::DATATYPE_FLOAT32 &&
+           (type == ppl::common::DATATYPE_FLOAT16 ||
+            type == ppl::common::DATATYPE_INT8)) {
+            highest = type;
         }
         for (uint32_t i = 0; i < info->GetInputCount(); ++i) {
             auto in_shape = info->GetInput<TensorImpl>(i)->GetShape();

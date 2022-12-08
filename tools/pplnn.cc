@@ -84,7 +84,7 @@ Define_string_opt("--reshaped-inputs", g_flag_reshaped_inputs, "",
 Define_string_opt("--in-shapes", g_flag_input_shapes, "",
                   "shapes of input tensors."
                   " dims are separated by underline, inputs are separated by comma. example:"
-                  " 1_3_128_128,2_3_400_640,3_3_768_1024");
+                  " 1_3_128_128,2_3_400_640,3_3_768_1024. empty fields between commas are scalars.");
 
 Define_bool_opt("--save-input", g_flag_save_input, false, "save input tensors in one file in NDARRAY format");
 Define_bool_opt("--save-inputs", g_flag_save_inputs, false, "save separated input tensors in NDARRAY format");
@@ -144,38 +144,36 @@ static void SplitString(const char* str, unsigned int len, const char* delim, un
 }
 
 static bool ParseInputShapes(const string& shape_str, vector<vector<int64_t>>* input_shapes) {
-    bool ok = true;
-
     vector<string> input_shape_list;
     SplitString(shape_str.data(), shape_str.size(), ",", 1,
-                [&ok, &input_shape_list](const char* s, unsigned int l) -> bool {
+                [&input_shape_list](const char* s, unsigned int l) -> bool {
                     if (l > 0) {
                         input_shape_list.emplace_back(s, l);
-                        return true;
+                    } else {
+                        input_shape_list.push_back(string());
                     }
-                    LOG(ERROR) << "empty shape in option '--input-shapes'";
-                    ok = false;
-                    return false;
+                    return true;
                 });
-    if (!ok) {
-        return false;
-    }
 
     for (auto x = input_shape_list.begin(); x != input_shape_list.end(); ++x) {
-        ok = true;
         vector<int64_t> shape;
-        SplitString(x->data(), x->size(), "_", 1, [&ok, &shape](const char* s, unsigned int l) -> bool {
-            if (l > 0) {
-                int64_t dim = atol(string(s, l).c_str());
-                shape.push_back(dim);
-                return true;
+
+        // empty shape means scalar
+        if (!x->empty()) {
+            bool ok = true;
+            SplitString(x->data(), x->size(), "_", 1, [&ok, &shape](const char* s, unsigned int l) -> bool {
+                if (l > 0) {
+                    int64_t dim = atol(string(s, l).c_str());
+                    shape.push_back(dim);
+                    return true;
+                }
+                LOG(ERROR) << "illegal dim format.";
+                ok = false;
+                return false;
+            });
+            if (!ok) {
+                return false;
             }
-            LOG(ERROR) << "illegal dim format.";
-            ok = false;
-            return false;
-        });
-        if (!ok) {
-            return false;
         }
 
         input_shapes->push_back(shape);
@@ -507,7 +505,7 @@ static bool RegisterEngines(vector<unique_ptr<Engine>>* engines) {
 
     if (engines->empty()) {
         LOG(ERROR) << "no engine is registered. run `./pplnn --help` to see supported engines marked with '--use-*', "
-                      "or see documents listed in README.md for building instructions.";
+                   << "or see documents listed in README.md for building instructions.";
         return false;
     }
 
@@ -712,6 +710,8 @@ static bool SetReshapedInputsOneByOne(const string& input_files_str, Runtime* ru
         SplitString(file_name.data(), file_name.size(), "-", 1, [&conponents](const char* s, unsigned int l) -> bool {
             if (l > 0) {
                 conponents.push_back(string(s, l));
+            } else {
+                conponents.push_back(string());
             }
             return true;
         });
@@ -730,17 +730,18 @@ static bool SetReshapedInputsOneByOne(const string& input_files_str, Runtime* ru
                     });
 
         const string& dims_str = conponents[1];
-
         vector<int64_t> dims;
-        SplitString(dims_str.data(), dims_str.size(), "_", 1, [&dims](const char* s, unsigned int l) -> bool {
-            if (l > 0) {
-                int64_t dim = atol(string(s, l).c_str());
-                dims.push_back(dim);
-                return true;
-            }
-            LOG(ERROR) << "illegal dim format.";
-            return false;
-        });
+        if (!dims_str.empty()) {
+            SplitString(dims_str.data(), dims_str.size(), "_", 1, [&dims](const char* s, unsigned int l) -> bool {
+                if (l > 0) {
+                    int64_t dim = atol(string(s, l).c_str());
+                    dims.push_back(dim);
+                    return true;
+                }
+                LOG(ERROR) << "illegal dim format.";
+                return false;
+            });
+        }
 
         auto data_type = FindDataTypeByStr(data_type_str);
         if (data_type == DATATYPE_UNKNOWN) {
@@ -874,7 +875,7 @@ static bool SaveOutputsOneByOne(const Runtime* runtime) {
     return true;
 }
 
-static void PrintInputOutputInfo(const Runtime* runtime) {
+static void PrintInputInfo(const Runtime* runtime) {
     cout << "----- input info -----" << endl;
     for (uint32_t i = 0; i < runtime->GetInputCount(); ++i) {
         auto tensor = runtime->GetInputTensor(i);
@@ -893,6 +894,10 @@ static void PrintInputOutputInfo(const Runtime* runtime) {
         cout << "    byte(s) excluding padding: " << shape->CalcBytesExcludingPadding() << endl;
     }
 
+    cout << "----------------------" << endl;
+}
+
+static void PrintOutputInfo(const Runtime* runtime) {
     cout << "----- output info -----" << endl;
     for (uint32_t i = 0; i < runtime->GetOutputCount(); ++i) {
         auto tensor = runtime->GetOutputTensor(i);
@@ -1293,6 +1298,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    PrintInputInfo(runtime.get());
+
     if (g_flag_no_run) {
         return 0;
     }
@@ -1309,7 +1316,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    PrintInputOutputInfo(runtime.get());
+    PrintOutputInfo(runtime.get());
 
     auto diff = std::chrono::duration_cast<std::chrono::microseconds>(run_end_ts - run_begin_ts);
     LOG(INFO) << "Run() costs: " << (float)diff.count() / 1000 << " ms.";
