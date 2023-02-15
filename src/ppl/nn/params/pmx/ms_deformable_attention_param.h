@@ -23,10 +23,10 @@
 
 namespace ppl { namespace nn { namespace pmx {
 
-struct MsDeformAttnParam final : public ir::TypedAttr<MsDeformAttnParam> {
+struct MSDeformAttnParam final : public ir::TypedAttr<MSDeformAttnParam> {
     int im2col_step;
 
-    bool operator==(const MsDeformAttnParam& p) const {
+    bool operator==(const MSDeformAttnParam& p) const {
         return this->im2col_step == p.im2col_step;
     }
 };

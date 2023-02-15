@@ -25,7 +25,7 @@
 
 namespace ppl { namespace nn { namespace onnx {
 
-ppl::common::RetCode ParseMsDeformAttnParam(const ::onnx::NodeProto&, const onnx::ParamParserExtraArgs&, ir::Node*,
+ppl::common::RetCode ParseMSDeformAttnParam(const ::onnx::NodeProto&, const onnx::ParamParserExtraArgs&, ir::Node*,
                                               ir::Attr*);
 
 }}} // namespace ppl::nn::onnx

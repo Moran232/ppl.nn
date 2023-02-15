@@ -248,7 +248,7 @@ ParamParserManager::ParamParserManager() {
     PPL_REGISTER_OP_WITH_PARAM("pmx", "ChannelShuffle", 1, 1, ppl::nn::pmx::ChannelShuffleParam,
                                ParseChannelShuffleParam, nullptr);
 
-    PPL_REGISTER_OP_WITH_PARAM("pmx", "MsDeformAttn", 1, 1, ppl::nn::pmx::MsDeformAttnParam, ParseMsDeformAttnParam, nullptr);
+    PPL_REGISTER_OP_WITH_PARAM("pmx", "MSDeformAttn", 1, 1, ppl::nn::pmx::MSDeformAttnParam, ParseMSDeformAttnParam, nullptr);
 }
 
 }}} // namespace ppl::nn::onnx

@@ -24,7 +24,7 @@
 
 namespace ppl { namespace nn { namespace cuda {
 
-/* uint64_t MsDeformAttnKernel::CalcTmpBufferSize(const KernelExecContext& ctx) const { */
+/* uint64_t MSDeformAttnKernel::CalcTmpBufferSize(const KernelExecContext& ctx) const { */
     /* auto y = ctx.GetOutput<TensorImpl>(0); */
     /* if (y->GetShape()->GetDataType() == ppl::common::DATATYPE_INT8) { */
         /* return sizeof(float) * y->GetShape()->CalcElementsExcludingPadding(); */
@@ -33,7 +33,7 @@ namespace ppl { namespace nn { namespace cuda {
     /* } */
 /* } */
 
-ppl::common::RetCode MsDeformAttnKernel::DoExecute(KernelExecContext* ctx) {
+ppl::common::RetCode MSDeformAttnKernel::DoExecute(KernelExecContext* ctx) {
 
     auto input0 = ctx->GetInput<TensorImpl>(0);
     auto output = ctx->GetOutput<TensorImpl>(0);
@@ -49,7 +49,7 @@ ppl::common::RetCode MsDeformAttnKernel::DoExecute(KernelExecContext* ctx) {
     auto input4 = ctx->GetInput<TensorImpl>(4);
 
     auto status =
-        PPLCUDAMsDeformAttnForwardImp(GetStream(),
+        PPLCUDAMSDeformAttnForwardImp(GetStream(),
                 input0->GetBufferPtr(),
                 input1->GetBufferPtr(),
                 input2->GetBufferPtr(),

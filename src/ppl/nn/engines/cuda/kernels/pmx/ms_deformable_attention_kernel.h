@@ -24,11 +24,11 @@
 
 namespace ppl { namespace nn { namespace cuda {
 
-class MsDeformAttnKernel : public CudaKernel {
+class MSDeformAttnKernel : public CudaKernel {
 public:
-    MsDeformAttnKernel(const ir::Node* node) : CudaKernel(node) {}
+    MSDeformAttnKernel(const ir::Node* node) : CudaKernel(node) {}
 
-    void SetParam(const ppl::nn::pmx::MsDeformAttnParam* p) {
+    void SetParam(const ppl::nn::pmx::MSDeformAttnParam* p) {
         param_ = p;
     }
 
@@ -36,7 +36,7 @@ private:
     ppl::common::RetCode DoExecute(KernelExecContext*) override;
 
 private:
-    const ppl::nn::pmx::MsDeformAttnParam* param_ = nullptr;
+    const ppl::nn::pmx::MSDeformAttnParam* param_ = nullptr;
 };
 
 }}} // namespace ppl::nn::cuda

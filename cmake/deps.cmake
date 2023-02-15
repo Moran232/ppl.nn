@@ -264,13 +264,15 @@ endif()
 
 # --------------------------------------------------------------------------- #
 
+set(__PPLCUDAKERNEL_COMMIT__ e7cbe964ca3725112c5223c7e6b3b3a9096e24b0)
+
 if(PPLNN_USE_CUDA)
     if(PPLNN_DEP_PPLCUDAKERNEL_PKG)
         hpcc_declare_pkg_dep(ppl.kernel.cuda
             ${PPLNN_DEP_PPLCUDAKERNEL_PKG})
     else()
         if(NOT PPLNN_DEP_PPLCUDAKERNEL_GIT)
-            set(PPLNN_DEP_PPLCUDAKERNEL_GIT "https://github.com/openppl-public/ppl.kernel.cuda.git")
+            set(PPLNN_DEP_PPLCUDAKERNEL_GIT "https://github.com/Moran232/ppl.kernel.cuda.git")
         endif()
         hpcc_declare_git_dep(ppl.kernel.cuda
             ${PPLNN_DEP_PPLCUDAKERNEL_GIT}

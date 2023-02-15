@@ -23,9 +23,9 @@ using namespace ppl::nn::pmx;
 
 namespace ppl { namespace nn { namespace onnx {
 
-RetCode ParseMsDeformAttnParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraArgs& args, ir::Node*,
+RetCode ParseMSDeformAttnParam(const ::onnx::NodeProto& pb_node, const ParamParserExtraArgs& args, ir::Node*,
                                  ir::Attr* arg) {
-    auto param = static_cast<MsDeformAttnParam*>(arg);
+    auto param = static_cast<MSDeformAttnParam*>(arg);
     utils::GetNodeAttr(pb_node, "im2col_step", &param->im2col_step, 1);
     return RC_SUCCESS;
 }

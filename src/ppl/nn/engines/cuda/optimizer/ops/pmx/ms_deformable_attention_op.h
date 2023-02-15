@@ -24,9 +24,9 @@
 
 namespace ppl { namespace nn { namespace cuda {
 
-class MsDeformAttnOp final : public CudaOptKernel {
+class MSDeformAttnOp final : public CudaOptKernel {
 public:
-    MsDeformAttnOp(const ir::Node* node);
+    MSDeformAttnOp(const ir::Node* node);
     KernelImpl* CreateKernelImpl() const override;
     ppl::common::RetCode Init(const OptKernelOptions&) override;
     ppl::common::RetCode Finalize(const OptKernelOptions& options) override;
@@ -36,7 +36,7 @@ public:
 #endif
 
 private:
-    ppl::nn::pmx::MsDeformAttnParam param_;
+    ppl::nn::pmx::MSDeformAttnParam param_;
 };
 
 }}} // namespace ppl::nn::cuda

@@ -33,8 +33,8 @@ using namespace ppl::nn::pmx;
 
 namespace ppl { namespace nn { namespace cuda {
 
-RetCode MsDeformAttnOp::Init(const OptKernelOptions& options) {
-    auto status = GenericLoadParam<MsDeformAttnParam>(options, &param_);
+RetCode MSDeformAttnOp::Init(const OptKernelOptions& options) {
+    auto status = GenericLoadParam<MSDeformAttnParam>(options, &param_);
     if (status != RC_SUCCESS) {
         LOG(ERROR) << "load param failed: " << GetRetCodeStr(status);
         return status;
@@ -43,7 +43,7 @@ RetCode MsDeformAttnOp::Init(const OptKernelOptions& options) {
     return RC_SUCCESS;
 }
 
-MsDeformAttnOp::MsDeformAttnOp(const ir::Node* node) : CudaOptKernel(node) {
+MSDeformAttnOp::MSDeformAttnOp(const ir::Node* node) : CudaOptKernel(node) {
     infer_type_func_ = [](InputOutputInfo* info, std::vector<CudaTensorQuant>* quant, datatype_t type) -> RetCode {
         ppl::common::RetCode status;
         if (type == DATATYPE_UNKNOWN) {
@@ -59,7 +59,7 @@ MsDeformAttnOp::MsDeformAttnOp(const ir::Node* node) : CudaOptKernel(node) {
 
 }
 
-RetCode MsDeformAttnOp::Finalize(const OptKernelOptions& options) {
+RetCode MSDeformAttnOp::Finalize(const OptKernelOptions& options) {
     auto status = SetCommonParam(options);
     if (status != RC_SUCCESS) {
         LOG(ERROR) << "load common param failed: " << GetRetCodeStr(status);
@@ -69,12 +69,12 @@ RetCode MsDeformAttnOp::Finalize(const OptKernelOptions& options) {
     return RC_SUCCESS;
 }
 
-KernelImpl* MsDeformAttnOp::CreateKernelImpl() const {
-    return CreateKernelImplWithParam<MsDeformAttnKernel>(&param_);
+KernelImpl* MSDeformAttnOp::CreateKernelImpl() const {
+    return CreateKernelImplWithParam<MSDeformAttnKernel>(&param_);
 }
 
 #ifdef PPLNN_ENABLE_PMX_MODEL
-    ppl::common::RetCode MsDeformAttnOp::SerializeData(const ppl::nn::pmx::SerializationContext&, utils::DataStream* ds) const {
+    ppl::common::RetCode MSDeformAttnOp::SerializeData(const ppl::nn::pmx::SerializationContext&, utils::DataStream* ds) const {
 /*         flatbuffers::FlatBufferBuilder builder; */
         /* auto fb_param = ppl::nn::pmx::onnx::SerializeReduceParam(param_, &builder); */
         /* auto fb_op_param = ppl::nn::pmx::onnx::CreateOpParam(builder, ppl::nn::pmx::onnx::OpParamType_ReduceParam, fb_param.Union()); */
@@ -82,7 +82,7 @@ KernelImpl* MsDeformAttnOp::CreateKernelImpl() const {
         /* return ds->Write(builder.GetBufferPointer(), builder.GetSize()); */
         return ppl::common::RC_SUCCESS;
     }
-    ppl::common::RetCode MsDeformAttnOp::DeserializeData(const ppl::nn::pmx::DeserializationContext&, const void* base, uint64_t size) {
+    ppl::common::RetCode MSDeformAttnOp::DeserializeData(const ppl::nn::pmx::DeserializationContext&, const void* base, uint64_t size) {
 /*         auto fb_op_param = ppl::nn::pmx::onnx::GetOpParam(base); */
         /* auto fb_argmax_param = fb_op_param->value_as_ReduceParam(); */
         /* ppl::nn::pmx::onnx::DeserializeReduceParam(*fb_argmax_param, &param_); */
