@@ -261,7 +261,7 @@ void RegisterBuiltinOpImpls() {
     RegisterOptKernelCreator<BridgeOp>("pmx", "Bridge", 1, 1);
     RegisterOptKernelCreator<ChannelShuffleOp>("pmx", "ChannelShuffle", 1, 1);
     RegisterOptKernelCreator<PPLShapeOperationOp>("pmx", "Shape", 1, 1);
-    RegisterOptKernelCreator<MSDeformAttnOp>("pmx", "MSDeformAttn", 1, 1);
+    RegisterOptKernelCreator<MSDeformAttnOp>("mmdeploy", "MSDeformAttn", 1, 1);
 }
 
 }}} // namespace ppl::nn::cuda

@@ -19,7 +19,7 @@
 
 #include "ppl/nn/common/logger.h"
 #include "ppl/nn/engines/cuda/kernels/pmx/ms_deformable_attention_kernel.h"
-// #include "ppl/nn/oputils/onnx/reshape_ms_deformable_attention.h"
+#include "ppl/nn/oputils/onnx/reshape_ms_deformable_attention.h"
 
 using namespace std;
 using namespace ppl::common;
@@ -55,7 +55,9 @@ MSDeformAttnOp::MSDeformAttnOp(const ir::Node* node) : CudaOptKernel(node) {
         }
         return status;
     };
-    infer_dims_func_ = GenericInferDims;
+    infer_dims_func_ = [this](InputOutputInfo* info) -> RetCode {
+        return ppl::nn::pmx::ReshapeMSDeformAttn(info, &param_);
+    };
 
 }
 
