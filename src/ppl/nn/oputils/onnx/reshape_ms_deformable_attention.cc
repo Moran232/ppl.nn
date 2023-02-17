@@ -32,8 +32,10 @@ RetCode ReshapeMSDeformAttn(InputOutputInfo* info, const ir::Attr* arg) {
     
     auto batch = input_data->GetDim(0);
 
-    if(batch % param->im2col_step != 0){
-        LOG(DEBUG) << "batch = "<<batch<<" must divide im2_col_step = " << param->im2col_step;
+    const int im2col_step_ = batch<param->im2col_step? batch: param->im2col_step;
+
+    if(batch % im2col_step_ != 0){
+        LOG(DEBUG) << "batch = "<<batch<<" must divide im2_col_step = " << im2col_step_;
         return RC_INVALID_VALUE;
     }
 
