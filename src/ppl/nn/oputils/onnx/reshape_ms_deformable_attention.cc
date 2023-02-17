@@ -23,7 +23,7 @@ using namespace ppl::common;
 namespace ppl { namespace nn { namespace pmx {
 
 RetCode ReshapeMSDeformAttn(InputOutputInfo* info, const ir::Attr* arg) {
-    auto im2col_step = static_cast<const MSDeformAttnParam*>(arg);
+    auto param = static_cast<const MSDeformAttnParam*>(arg);
 
     auto input_data = info->GetInput<TensorImpl>(0)->GetShape();
 
@@ -31,6 +31,12 @@ RetCode ReshapeMSDeformAttn(InputOutputInfo* info, const ir::Attr* arg) {
     auto sampling_loc = info->GetInput<TensorImpl>(3)->GetShape();
     
     auto batch = input_data->GetDim(0);
+
+    if(batch % param->im2col_step != 0){
+        LOG(DEBUG) << "batch = "<<batch<<" must divide im2_col_step = " << param->im2col_step;
+        return RC_INVALID_VALUE;
+    }
+
     // auto spatial_size = input_data->GetDim(1);
     auto num_heads = input_data->GetDim(2);
     auto channels = input_data->GetDim(3);

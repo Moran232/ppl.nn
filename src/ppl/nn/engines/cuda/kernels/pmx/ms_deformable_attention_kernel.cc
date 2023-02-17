@@ -35,27 +35,53 @@ namespace ppl { namespace nn { namespace cuda {
 
 ppl::common::RetCode MSDeformAttnKernel::DoExecute(KernelExecContext* ctx) {
 
-    auto input0 = ctx->GetInput<TensorImpl>(0);
+    auto data = ctx->GetInput<TensorImpl>(0);
     auto output = ctx->GetOutput<TensorImpl>(0);
-    // const TensorShape& input_shape = *input0->GetShape();
+
+    const TensorShape* input_shape = data->GetShape();
+    const TensorShape* output_shape = output->GetShape();
 
     // auto input_quant = GetCommonParam()->cuda_tensor_info->at(input->GetEdge()->GetId());
     // auto output_quant = GetCommonParam()->cuda_tensor_info->at(output->GetEdge()->GetId());
     // QuantKernelParamCuda qparam(input_quant.zero_point[0], output_quant.zero_point[0], input_quant.scale[0], output_quant.scale[0]);
 
-    auto input1 = ctx->GetInput<TensorImpl>(1);
-    auto input2 = ctx->GetInput<TensorImpl>(2);
-    auto input3 = ctx->GetInput<TensorImpl>(3);
-    auto input4 = ctx->GetInput<TensorImpl>(4);
+    auto spatial_shapes = ctx->GetInput<TensorImpl>(1);
+    auto level_start_index = ctx->GetInput<TensorImpl>(2);
+    auto sampling_loc = ctx->GetInput<TensorImpl>(3);
+    auto attn_weight = ctx->GetInput<TensorImpl>(4);
+
+    const int batch = input_shape->GetDim(0);
+    const int spatial_size = input_shape->GetDim(1);
+    const int num_heads = input_shape->GetDim(2);
+    const int channels = input_shape->GetDim(3);
+
+    const int num_levels = spatial_shapes->GetShape()->GetDim(0);
+
+    const int num_query = sampling_loc->GetShape()->GetDim(1);
+    const int num_point = sampling_loc->GetShape()->GetDim(4);
+
+    const int im2col_step_ = std::min(batch, param_->im2col_step);
 
     auto status =
-        PPLCUDAMSDeformAttnForwardImp(GetStream(),
-                input0->GetBufferPtr(),
-                input1->GetBufferPtr(),
-                input2->GetBufferPtr(),
-                input3->GetBufferPtr(),
-                input4->GetBufferPtr(),
-                output->GetBufferPtr(), param_->im2col_step);
+        PPLCUDAMSDeformAttnForwardImp(
+                GetStream(),
+                input_shape,
+                output_shape,
+                data->GetBufferPtr(),
+                spatial_shapes->GetBufferPtr(),
+                level_start_index->GetBufferPtr(),
+                sampling_loc->GetBufferPtr(),
+                attn_weight->GetBufferPtr(),
+                output->GetBufferPtr(), 
+                batch,
+                im2col_step_, 
+                spatial_size, 
+                num_heads, 
+                channels, 
+                num_levels, 
+                num_query, 
+                num_point);
+    
     return status;
 
 }
