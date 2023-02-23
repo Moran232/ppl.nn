@@ -264,7 +264,7 @@ endif()
 
 # --------------------------------------------------------------------------- #
 
-set(__PPLCUDAKERNEL_COMMIT__ e7cbe964ca3725112c5223c7e6b3b3a9096e24b0)
+set(__PPLCUDAKERNEL_COMMIT__ 9a8b9a0b98da0e717eaa1cce29fd377e51fb91c4)
 
 if(PPLNN_USE_CUDA)
     if(PPLNN_DEP_PPLCUDAKERNEL_PKG)
@@ -276,6 +276,6 @@ if(PPLNN_USE_CUDA)
         endif()
         hpcc_declare_git_dep(ppl.kernel.cuda
             ${PPLNN_DEP_PPLCUDAKERNEL_GIT}
-            master)
+            zmq/deform)
     endif()
 endif()
